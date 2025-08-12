@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
             ScribbleTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Greeting(
-                        name = "Android",
+                        name = "Androids",
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
