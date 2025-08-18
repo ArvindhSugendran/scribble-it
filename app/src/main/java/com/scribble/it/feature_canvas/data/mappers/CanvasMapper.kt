@@ -11,17 +11,19 @@ fun CanvasDrawing.toCanvasEntity(): CanvasEntity {
         id = this.id,
         title = this.title,
         canvasStrokesDto = this.canvasStrokes.map { it.toCanvasStrokeDto() },
+        thumbnailPath = this.thumbnailPath,
         createdDate = this.createdDate,
         modifiedDate = this.modifiedDate,
         deletedAt = this.deletedAt
     )
 }
 
-fun CanvasEntity.toCanvasDomain(): CanvasDrawing {
+fun CanvasEntity.toCanvasDrawing(): CanvasDrawing {
     return CanvasDrawing(
         id = this.id,
         title = this.title,
         canvasStrokes = this.canvasStrokesDto.map { it.toCanvasStroke() },
+        thumbnailPath = this.thumbnailPath,
         createdDate = this.createdDate,
         modifiedDate = this.modifiedDate,
         deletedAt = this.deletedAt
