@@ -1,21 +1,33 @@
 package com.scribble.it.feature_canvas.data.local.db.dao
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.scribble.it.feature_canvas.data.local.db.entities.CanvasEntity
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ScribbleDao {
 
-    @Query("SELECT * FROM canvas_table WHERE deletedAt IS NULL")
-    fun getListOfCanvas(): Flow<List<CanvasEntity>>
-
-    @Query("SELECT * FROM canvas_table WHERE deletedAt IS NOT NULL")
-    suspend fun getRecycledCanvas(): List<CanvasEntity>
+    @Query("""SELECT * FROM canvas_table
+        WHERE (
+        :isRecycled AND deletedAt IS NOT NULL
+        OR
+        NOT :isRecycled AND deletedAt IS NUll
+        )
+        AND 
+        title LIKE '%' || :query || '%'
+        ORDER BY
+        CASE WHEN :sortOption = 'TITLE_ASC' THEN title END ASC,
+        CASE WHEN :sortOption = 'TITLE_DESC' THEN title END DESC,
+        CASE WHEN :sortOption = 'CREATED_DATE_ASC' THEN title END ASC,
+        CASE WHEN :sortOption = 'CREATED_DATE_DESC' THEN title END DESC,
+        CASE WHEN :sortOption = 'MODIFIED_DATE_ASC' THEN title END ASC,
+        CASE WHEN :sortOption = 'MODIFIED_DATE_DESC' THEN title END DESC
+    """)
+    fun getPagingCanvases(query: String, sortOption: String, isRecycled: Boolean): PagingSource<Int, CanvasEntity>
 
     @Query("SELECT * FROM canvas_table WHERE id = :canvasId")
     suspend fun getCanvasById(canvasId: Int): CanvasEntity?
@@ -24,18 +36,18 @@ interface ScribbleDao {
     suspend fun upsertCanvas(canvasEntity: CanvasEntity)
 
     @Delete
-    suspend fun deleteCanvasList(canvasList: List<CanvasEntity>)
+    suspend fun deleteCanvases(canvases: List<CanvasEntity>)
 
     @Delete
     suspend fun deleteCanvas(canvas: CanvasEntity)
 
-    @Query("UPDATE canvas_table SET deletedAt = :timeStamp WHERE id = :canvasId")
-    suspend fun recycleCanvas(canvasId: Int, timeStamp: Long)
+    @Query("UPDATE canvas_table SET deletedAt = :timeStamp WHERE id IN (:canvasIds)")
+    suspend fun recycleCanvases(canvasIds: List<Int>, timeStamp: Long)
 
-    @Query("UPDATE canvas_table SET deletedAt = null WHERE id = :canvasId")
-    suspend fun restoreCanvas(canvasId: Int)
+    @Query("UPDATE canvas_table SET deletedAt = null WHERE id IN (:canvasIds)")
+    suspend fun restoreCanvases(canvasIds: List<Int>)
 
     @Query("DELETE FROM canvas_table WHERE deletedAt IS NOT NULL AND deletedAt < :timestampLimit")
-    suspend fun deleteOldRecycledCanvas(timestampLimit: Long)
+    suspend fun deleteOldRecycledCanvases(timestampLimit: Long)
 
 }

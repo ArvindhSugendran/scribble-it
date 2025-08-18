@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "3b6df4547e07e37d76323bbfd9403d27",
+    "identityHash": "080c646b542db5854278a29657deb8f7",
     "entities": [
       {
         "tableName": "canvas_table",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `title` TEXT NOT NULL, `canvasStrokes` TEXT NOT NULL, `createdDate` INTEGER NOT NULL, `modifiedDate` INTEGER NOT NULL, `deletedAt` INTEGER)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `title` TEXT NOT NULL, `canvasStrokes` TEXT NOT NULL, `thumbnailPath` TEXT, `createdDate` INTEGER NOT NULL, `modifiedDate` INTEGER NOT NULL, `deletedAt` INTEGER)",
         "fields": [
           {
             "fieldPath": "id",
@@ -24,6 +24,11 @@
             "columnName": "canvasStrokes",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "thumbnailPath",
+            "columnName": "thumbnailPath",
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "createdDate",
@@ -53,7 +58,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3b6df4547e07e37d76323bbfd9403d27')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '080c646b542db5854278a29657deb8f7')"
     ]
   }
 }
