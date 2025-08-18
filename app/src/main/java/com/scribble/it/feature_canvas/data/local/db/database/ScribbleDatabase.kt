@@ -7,7 +7,6 @@ import com.scribble.it.feature_canvas.data.local.converters.CanvasStrokeDtoListT
 import com.scribble.it.feature_canvas.data.local.db.dao.ScribbleDao
 import com.scribble.it.feature_canvas.data.local.db.entities.CanvasEntity
 
-
 @Database(
     entities = [CanvasEntity::class],
     version = 1,

@@ -12,6 +12,7 @@ data class CanvasEntity(
     val title: String,
     @ColumnInfo(name = "canvasStrokes")
     val canvasStrokesDto: List<CanvasStrokeDto>,
+    val thumbnailPath: String? = null,
     val createdDate: Long,
     val modifiedDate: Long,
     val deletedAt: Long? = null
