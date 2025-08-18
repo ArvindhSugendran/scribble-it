@@ -19,6 +19,8 @@ hiltNavigationCompose = "1.2.0"
 ksp = "2.1.0-1.0.29"
 room = "2.7.2"
 moshiKotlin = "1.15.0"
+paging = "3.3.6"
+pagingCompose = "3.3.6"
 
 [libraries]
 
@@ -70,6 +72,9 @@ kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 
+# Room Paging
+androidx-room-paging = { group = "androidx.room", name = "room-paging", version.ref = "room" }
+
 # Choose ONE compiler (kapt or ksp)
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 
@@ -78,6 +83,10 @@ moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "mosh
 
 # DataStore
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
+
+# Paging
+androidx-paging-runtime = {group = "androidx.paging", name = "paging-runtime-ktx", version.ref = "paging"}
+androidx-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "pagingCompose" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
