@@ -4,7 +4,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
-import com.scribble.it.core.util.PAGE_SIZE
+import com.scribble.it.feature_canvas.data.util.PAGE_SIZE
 import com.scribble.it.feature_canvas.data.local.db.dao.ScribbleDao
 import com.scribble.it.feature_canvas.data.local.db.entities.CanvasEntity
 import com.scribble.it.feature_canvas.data.mappers.toCanvasDrawing
@@ -17,7 +17,7 @@ import javax.inject.Inject
 
 class CanvasRepositoryImpl @Inject constructor(
     private val scribbleDao: ScribbleDao
-): CanvasRepository {
+) : CanvasRepository {
 
     override fun getPagingCanvases(
         query: String,
@@ -29,14 +29,15 @@ class CanvasRepositoryImpl @Inject constructor(
                 pageSize = PAGE_SIZE,
                 enablePlaceholders = false
             ),
-            pagingSourceFactory = { scribbleDao.getPagingCanvases(
-                query = query,
-                sortOption = sortOption,
-                isRecycled = isRecycled
-            )
+            pagingSourceFactory = {
+                scribbleDao.getPagingCanvases(
+                    query = query,
+                    sortOption = sortOption,
+                    isRecycled = isRecycled
+                )
             }
         ).flow
-            .map { value: PagingData<CanvasEntity> ->  
+            .map { value: PagingData<CanvasEntity> ->
                 value.map { canvasEntity: CanvasEntity ->
                     canvasEntity.toCanvasDrawing()
                 }
@@ -47,16 +48,12 @@ class CanvasRepositoryImpl @Inject constructor(
         return scribbleDao.getCanvasById(canvasId = canvasId)?.toCanvasDrawing()
     }
 
-    override suspend fun upsetCanvas(canvasDrawing: CanvasDrawing) {
+    override suspend fun upsertCanvas(canvasDrawing: CanvasDrawing) {
         scribbleDao.upsertCanvas(canvasEntity = canvasDrawing.toCanvasEntity())
     }
 
-    override suspend fun deleteCanvasList(canvases: List<CanvasDrawing>) {
+    override suspend fun deleteCanvases(canvases: List<CanvasDrawing>) {
         scribbleDao.deleteCanvases(canvases = canvases.map { it.toCanvasEntity() })
-    }
-
-    override suspend fun deleteCanvas(canvasDrawing: CanvasDrawing) {
-        scribbleDao.deleteCanvas(canvas = canvasDrawing.toCanvasEntity())
     }
 
     override suspend fun recycleCanvases(canvasIds: List<Int>, timeStamp: Long) {
@@ -67,8 +64,8 @@ class CanvasRepositoryImpl @Inject constructor(
         scribbleDao.restoreCanvases(canvasIds = canvasIds)
     }
 
-    override suspend fun deleteOldRecycledCanvases(timeStamp: Long) {
-        scribbleDao.deleteOldRecycledCanvases(timeStamp)
+    override suspend fun deleteOldRecycledCanvases(timeStampLimit: Long) {
+        scribbleDao.deleteOldRecycledCanvases(timeStampLimit)
     }
 
 }

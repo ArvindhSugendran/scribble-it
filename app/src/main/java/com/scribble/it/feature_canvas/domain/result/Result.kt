@@ -1,0 +1,11 @@
+package com.scribble.it.feature_canvas.domain.result
+
+import com.scribble.it.feature_canvas.domain.error.Error
+
+typealias RootError = Error
+
+sealed interface Result<out D, out E: RootError> {
+    data class Success<out D, out E: RootError>(val data: D): Result<D, E>
+    data class Error<out D, out E: RootError>(val error: E): Result<D, E>
+    data object Loading: Result<Nothing, Nothing>
+}

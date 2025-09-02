@@ -38,9 +38,6 @@ interface ScribbleDao {
     @Delete
     suspend fun deleteCanvases(canvases: List<CanvasEntity>)
 
-    @Delete
-    suspend fun deleteCanvas(canvas: CanvasEntity)
-
     @Query("UPDATE canvas_table SET deletedAt = :timeStamp WHERE id IN (:canvasIds)")
     suspend fun recycleCanvases(canvasIds: List<Int>, timeStamp: Long)
 
