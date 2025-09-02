@@ -9,15 +9,13 @@ interface CanvasRepository {
 
     suspend fun getCanvasById(canvasId: Int): CanvasDrawing?
 
-    suspend fun upsetCanvas(canvasDrawing: CanvasDrawing)
+    suspend fun upsertCanvas(canvasDrawing: CanvasDrawing)
 
-    suspend fun deleteCanvasList(canvases: List<CanvasDrawing>)
-
-    suspend fun deleteCanvas(canvasDrawing: CanvasDrawing)
+    suspend fun deleteCanvases(canvases: List<CanvasDrawing>)
 
     suspend fun recycleCanvases(canvasIds: List<Int>, timeStamp: Long)
 
     suspend fun restoreCanvases(canvasIds: List<Int>)
 
-    suspend fun deleteOldRecycledCanvases(timeStamp: Long)
+    suspend fun deleteOldRecycledCanvases(timeStampLimit: Long)
 }
