@@ -35,7 +35,7 @@ fun CanvasStroke.toCanvasStrokeDto(): CanvasStrokeDto {
         xCoordinate = this.xCoordinate,
         yCoordinate = this.yCoordinate,
         pen = this.pen.name,
-        strokePX = this.strokePX,
+        strokePx = this.strokePx,
         color = this.color
     )
 }
@@ -45,7 +45,7 @@ fun CanvasStrokeDto.toCanvasStroke(): CanvasStroke {
         xCoordinate = this.xCoordinate,
         yCoordinate = this.yCoordinate,
         pen = PEN.valueOf(this.pen),
-        strokePX = this.strokePX,
+        strokePx = this.strokePx,
         color = this.color
     )
 }

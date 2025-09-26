@@ -4,6 +4,6 @@ data class CanvasStrokeDto(
     val xCoordinate: Float,
     val yCoordinate: Float,
     val pen: String,
-    val strokePX: Float,
+    val strokePx: Float,
     val color: Int
 )
