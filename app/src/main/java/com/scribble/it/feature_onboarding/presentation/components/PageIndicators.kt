@@ -7,19 +7,23 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun PageIndicators(
     currentPage: Int,
     totalPages: Int,
+    dotSize: Dp,
     modifier: Modifier = Modifier
 ) {
 
@@ -31,16 +35,16 @@ fun PageIndicators(
         repeat(totalPages) { index ->
             val isSelected = index == currentPage
 
-            val size by animateDpAsState(
-                targetValue = if (isSelected) 14.dp else 8.dp,
+            val animatedSize by animateDpAsState(
+                targetValue = if (isSelected) dotSize else dotSize * 0.7f,
                 label = "dot-size"
             )
 
             val color by animateColorAsState(
                 targetValue = if (isSelected)
-                    MaterialTheme.colorScheme.primary
+                    Color.White
                 else
-                    MaterialTheme.colorScheme.onSurface.copy(
+                    Color.White.copy(
                         alpha = 0.4f
                     ),
                 label = "dot-color"
@@ -48,7 +52,7 @@ fun PageIndicators(
 
             Box(
                 modifier = Modifier
-                    .size(size)
+                    .size(animatedSize)
                     .background(
                         color = color,
                         shape = CircleShape

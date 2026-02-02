@@ -1,72 +1,96 @@
 package com.scribble.it.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Blue80,
-    onPrimary = Blue20,
-    primaryContainer = Blue30,
-    onPrimaryContainer = Blue90,
-    inversePrimary = Blue40,
-    secondary = DarkBlue80,
-    onSecondary = DarkBlue20,
-    secondaryContainer = DarkBlue30,
-    onSecondaryContainer = DarkBlue90,
-    tertiary = Teal80,
-    onTertiary = Teal20,
-    tertiaryContainer = Teal30,
-    onTertiaryContainer = Teal90,
+
+    // Primary — Burnt Amber
+    primary = Amber80,
+    onPrimary = Amber20,
+    primaryContainer = Amber30,
+    onPrimaryContainer = Amber90,
+    inversePrimary = Amber40,
+
+    // Secondary — Dusty Violet
+    secondary = Violet80,
+    onSecondary = Violet20,
+    secondaryContainer = Violet30,
+    onSecondaryContainer = Violet90,
+
+    // Tertiary — Moss Teal
+    tertiary = Moss80,
+    onTertiary = Moss20,
+    tertiaryContainer = Moss30,
+    onTertiaryContainer = Moss90,
+
+    // Error (keep Material defaults or your existing reds)
     error = Red80,
     onError = Red20,
     errorContainer = Red30,
     onErrorContainer = Red90,
-    background = Grey10,
-    onBackground = Grey90,
-    surface = BlueGrey10,
-    onSurface = BlueGrey90,
-    inverseSurface = Grey90,
-    inverseOnSurface = Grey20,
-    surfaceVariant = BlueGrey20,
-    onSurfaceVariant = BlueGrey80,
-    outline = BlueGrey60
+
+    // Background & Surfaces — Warm Graphite
+    background = Graphite10,
+    onBackground = Graphite90,
+
+    surface = Graphite10,
+    onSurface = Graphite90,
+
+    surfaceVariant = Graphite20,
+    onSurfaceVariant = Graphite80,
+
+    outline = Graphite60,
+
+    inverseSurface = Graphite90,
+    inverseOnSurface = Graphite20
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Blue40,
+
+    // Primary — Burnt Amber
+    primary = Amber40,
     onPrimary = Color.White,
-    primaryContainer = Blue90,
-    onPrimaryContainer = Blue10,
-    inversePrimary = Blue80,
-    secondary = DarkBlue40,
+    primaryContainer = Amber90,
+    onPrimaryContainer = Amber10,
+    inversePrimary = Amber80,
+
+    // Secondary — Dusty Violet
+    secondary = Violet40,
     onSecondary = Color.White,
-    secondaryContainer = DarkBlue90,
-    onSecondaryContainer = DarkBlue10,
-    tertiary = Teal40,
+    secondaryContainer = Violet90,
+    onSecondaryContainer = Violet10,
+
+    // Tertiary — Moss Teal
+    tertiary = Moss40,
     onTertiary = Color.White,
-    tertiaryContainer = Teal90,
-    onTertiaryContainer = Teal10,
+    tertiaryContainer = Moss90,
+    onTertiaryContainer = Moss10,
+
+    // Error
     error = Red40,
     onError = Color.White,
     errorContainer = Red90,
     onErrorContainer = Red10,
-    background = Grey99,
-    onBackground = Grey10,
-    surface = BlueGrey99,
-    onSurface = BlueGrey10,
-    inverseSurface = Grey20,
-    inverseOnSurface = Grey95,
-    surfaceVariant = BlueGrey90,
-    onSurfaceVariant = BlueGrey30,
-    outline = BlueGrey50
+
+    // Background & Surfaces — Warm Graphite
+    background = Graphite99,
+    onBackground = Graphite10,
+
+    surface = Graphite99,
+    onSurface = Graphite10,
+
+    surfaceVariant = Graphite90,
+    onSurfaceVariant = Graphite30,
+
+    outline = Graphite50,
+
+    inverseSurface = Graphite20,
+    inverseOnSurface = Graphite95
 )
 
 @Composable
@@ -77,11 +101,10 @@ fun ScribbleTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
+//        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+//            val context = LocalContext.current
+//            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+//        }
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }

@@ -6,10 +6,12 @@ import androidx.paging.PagingData
 import androidx.paging.map
 import com.scribble.it.feature_canvas.data.util.PAGE_SIZE
 import com.scribble.it.feature_canvas.data.local.db.dao.ScribbleDao
-import com.scribble.it.feature_canvas.data.local.db.entities.CanvasEntity
+import com.scribble.it.feature_canvas.data.local.db.model.CanvasSummaryEntity
 import com.scribble.it.feature_canvas.data.mappers.toCanvasDrawing
 import com.scribble.it.feature_canvas.data.mappers.toCanvasEntity
+import com.scribble.it.feature_canvas.data.mappers.toCanvasSummary
 import com.scribble.it.feature_canvas.domain.model.canvas.CanvasDrawing
+import com.scribble.it.feature_canvas.domain.model.canvasSummary.CanvasSummary
 import com.scribble.it.feature_canvas.domain.repository.CanvasRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -23,7 +25,7 @@ class CanvasRepositoryImpl @Inject constructor(
         query: String,
         sortOption: String,
         isRecycled: Boolean
-    ): Flow<PagingData<CanvasDrawing>> {
+    ): Flow<PagingData<CanvasSummary>> {
         return Pager(
             config = PagingConfig(
                 pageSize = PAGE_SIZE,
@@ -37,9 +39,9 @@ class CanvasRepositoryImpl @Inject constructor(
                 )
             }
         ).flow
-            .map { value: PagingData<CanvasEntity> ->
-                value.map { canvasEntity: CanvasEntity ->
-                    canvasEntity.toCanvasDrawing()
+            .map { value: PagingData<CanvasSummaryEntity> ->
+                value.map { canvasSummary: CanvasSummaryEntity ->
+                    canvasSummary.toCanvasSummary()
                 }
             }
     }

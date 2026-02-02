@@ -7,14 +7,15 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.scribble.it.feature_onboarding.domain.model.OnboardingPage
-import com.scribble.it.feature_onboarding.presentation.action.OnboardingPageAction
-import com.scribble.it.feature_onboarding.presentation.event.OnboardingPageEvent
+import com.scribble.it.feature_onboarding.presentation.action.OnboardingAction
+import com.scribble.it.feature_onboarding.presentation.event.OnboardingEvent
 import com.scribble.it.feature_onboarding.presentation.state.OnboardingUiState
-import com.scribble.it.ui.theme.Blue40
-import com.scribble.it.ui.theme.DarkBlue40
-import com.scribble.it.ui.theme.Teal40
+import com.scribble.it.ui.theme.Amber30
+import com.scribble.it.ui.theme.Moss30
+import com.scribble.it.ui.theme.Violet30
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,25 +34,25 @@ class OnboardingViewModel @Inject constructor(
             title = "Welcome to Scribble",
             description = "Unleash your creativity with the most intuitive drawing app",
             imageVector = Icons.Outlined.Brush,
-            backgroundColor = Blue40.copy(alpha = 0.25f)
+            backgroundColor = Violet30
         ),
         OnboardingPage(
             id = 2,
             title = "Draw Freely",
             description = "Smooth brushes and natural feel for your artistic expression",
             imageVector = Icons.Outlined.Palette,
-            backgroundColor = Teal40.copy(alpha = 0.25f)
+            backgroundColor = Moss30
         ),
         OnboardingPage(
             id = 3,
             title = "Save & Share",
             description = "Export your masterpieces in high quality and share with the world",
             imageVector = Icons.Outlined.Share,
-            backgroundColor = DarkBlue40.copy(alpha = 0.25f)
+            backgroundColor = Amber30
         )
     )
 
-    private val _onBoardingUiState = MutableStateFlow(
+    private val _onBoardingUiState: MutableStateFlow<OnboardingUiState> = MutableStateFlow(
         OnboardingUiState(
             pages = onboardingPages,
             currentPage = 0,
@@ -60,39 +61,39 @@ class OnboardingViewModel @Inject constructor(
     )
     val onBoardingUiState: StateFlow<OnboardingUiState> = _onBoardingUiState.asStateFlow()
 
-    private val eventChannel = Channel<OnboardingPageEvent>(Channel.BUFFERED)
-    val eventsFlow = eventChannel.receiveAsFlow()
+    private val eventChannel: Channel<OnboardingEvent> = Channel(Channel.BUFFERED)
+    val eventsFlow: Flow<OnboardingEvent> = eventChannel.receiveAsFlow()
 
-    fun viewAction(action: OnboardingPageAction) {
+    fun viewAction(action: OnboardingAction) {
         when (action) {
-            is OnboardingPageAction.PageChanged -> onPageChanged(action.page)
-            is OnboardingPageAction.NextClicked -> onNextClicked()
-            is OnboardingPageAction.GetStartedClicked -> onGetStartedClicked()
-            is OnboardingPageAction.SkipClicked -> onSkipClicked()
+            is OnboardingAction.Changed -> onPageChanged(action.page)
+            is OnboardingAction.NextClicked -> onNextClicked()
+            is OnboardingAction.GetStartedClicked -> onGetStartedClicked()
+            is OnboardingAction.SkipClicked -> onSkipClicked()
         }
     }
 
     private fun onPageChanged(page: Int) {
-        _onBoardingUiState.update {
-            it.copy(currentPage = page)
+        _onBoardingUiState.update { state->
+            state.copy(currentPage = page)
         }
     }
 
     private fun onNextClicked() {
-        _onBoardingUiState.update {
-            it.copy(currentPage = it.currentPage + 1)
+        _onBoardingUiState.update { state->
+            state.copy(currentPage = state.currentPage + 1)
         }
     }
 
     private fun onGetStartedClicked() {
         viewModelScope.launch {
-            eventChannel.send(OnboardingPageEvent.NavigateToHome)
+            eventChannel.send(OnboardingEvent.NavigateToHome)
         }
     }
 
     private fun onSkipClicked() {
         viewModelScope.launch {
-            eventChannel.send(OnboardingPageEvent.NavigateToHome)
+            eventChannel.send(OnboardingEvent.NavigateToHome)
         }
     }
 }

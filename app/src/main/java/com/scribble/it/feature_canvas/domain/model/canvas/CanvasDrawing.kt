@@ -7,7 +7,7 @@ data class CanvasDrawing(
     val title: String,
     val canvasStrokes: List<CanvasStroke>,
     val thumbnailPath: String? = null,
-    val createdDate: Long = 0L,
-    val modifiedDate: Long = 0L,
-    val deletedAt: Long? = null
+    val createdDate: Long,
+    val modifiedDate: Long,
+    val deletedAt: Long?
 )

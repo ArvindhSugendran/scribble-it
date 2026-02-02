@@ -11,26 +11,32 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
+import com.scribble.it.ui.theme.Graphite90
 
 @Composable
 fun NextButton(
     modifier: Modifier = Modifier,
+    fontSize: TextUnit,
+    horizontalPadding: Dp,
     onClick: () -> Unit,
 ) {
     FilledTonalButton(
         onClick = onClick,
         modifier = modifier,
+        shape = MaterialTheme.shapes.small,
         colors = ButtonDefaults.filledTonalButtonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary
+            containerColor = Graphite90.copy(alpha = 0.3f),
+            contentColor = Color.White
         )
     ) {
         Text(
             text = "Next",
-            style = MaterialTheme.typography.titleMedium
+            fontSize = fontSize
         )
-        Spacer(modifier = Modifier.width(5.dp))
+        Spacer(modifier = Modifier.width(horizontalPadding / 4))
         Icon(
             imageVector = Icons.AutoMirrored.Outlined.ArrowRight,
             contentDescription = "Next"

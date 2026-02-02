@@ -2,10 +2,11 @@ package com.scribble.it.feature_canvas.domain.repository
 
 import androidx.paging.PagingData
 import com.scribble.it.feature_canvas.domain.model.canvas.CanvasDrawing
+import com.scribble.it.feature_canvas.domain.model.canvasSummary.CanvasSummary
 import kotlinx.coroutines.flow.Flow
 
 interface CanvasRepository {
-    fun getPagingCanvases(query: String, sortOption: String, isRecycled: Boolean): Flow<PagingData<CanvasDrawing>>
+    fun getPagingCanvases(query: String, sortOption: String, isRecycled: Boolean): Flow<PagingData<CanvasSummary>>
 
     suspend fun getCanvasById(canvasId: Int): CanvasDrawing?
 
