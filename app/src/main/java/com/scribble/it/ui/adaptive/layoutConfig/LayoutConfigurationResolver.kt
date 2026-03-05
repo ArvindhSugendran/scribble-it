@@ -2,6 +2,8 @@ package com.scribble.it.ui.adaptive.layoutConfig
 
 import android.content.res.Configuration
 import android.util.Log
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
 import com.scribble.it.ui.adaptive.scale.HeightClass
 import com.scribble.it.ui.adaptive.scale.WidthClass
@@ -24,7 +26,36 @@ fun resolveHeightClass(windowSizeClass: WindowSizeClass): HeightClass {
     }
 }
 
-fun getLayoutConfiguration(windowSizeClass: WindowSizeClass, configuration: Configuration): LayoutConfiguration {
+fun resolveWidthClass(widthDp: Dp): WidthClass {
+    return when {
+        widthDp >= 1600.dp -> WidthClass.EXTRA_LARGE
+        widthDp >= 1200.dp -> WidthClass.LARGE
+        widthDp >= 840.dp -> WidthClass.EXPANDED
+        widthDp >= 600.dp -> WidthClass.MEDIUM
+        else -> WidthClass.COMPACT
+    }
+}
+
+fun resolveHeightClass(heightDp: Dp): HeightClass {
+    return when {
+        heightDp >= 900.dp -> HeightClass.EXPANDED
+        heightDp >= 480.dp -> HeightClass.MEDIUM
+        else -> HeightClass.COMPACT
+    }
+}
+
+fun isTwoPaneAllowed(
+    widthDp: Dp,
+    heightDp: Dp
+): Boolean {
+    return widthDp >= 600.dp &&
+            heightDp >= 580.dp
+}
+
+fun getLayoutConfiguration(
+    windowSizeClass: WindowSizeClass,
+    configuration: Configuration
+): LayoutConfiguration {
 
     val layoutConfig = LayoutConfiguration(
         width = resolveWidthClass(windowSizeClass),
@@ -40,6 +71,32 @@ fun getLayoutConfiguration(windowSizeClass: WindowSizeClass, configuration: Conf
             HeightClass = ${layoutConfig.height}       
             WidthDp     = ${configuration.screenWidthDp} dp
             HeightDp    = ${configuration.screenHeightDp} dp
+            Insight     = $description
+            """.trimIndent()
+    )
+
+    return layoutConfig
+}
+
+fun getPaneLayoutConfiguration(
+    widthDp: Dp,
+    heightDp: Dp
+): LayoutConfiguration {
+
+    val layoutConfig = LayoutConfiguration(
+        width = resolveWidthClass(widthDp),
+        height = resolveHeightClass(heightDp)
+    )
+
+    val description = logLayoutConfiguration(layoutConfig)
+
+    Log.d(
+        "PaneConfig",
+        """
+            WidthClass  = ${layoutConfig.width}
+            HeightClass = ${layoutConfig.height}       
+            WidthDp     = $widthDp
+            HeightDp    = $heightDp
             Insight     = $description
             """.trimIndent()
     )

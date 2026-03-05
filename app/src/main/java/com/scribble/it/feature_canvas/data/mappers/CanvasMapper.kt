@@ -1,5 +1,6 @@
 package com.scribble.it.feature_canvas.data.mappers
 
+import android.util.Log
 import com.scribble.it.feature_canvas.data.local.db.entities.CanvasEntity
 import com.scribble.it.feature_canvas.data.local.db.model.CanvasStrokeEntity
 import com.scribble.it.feature_canvas.data.local.db.model.CanvasSummaryEntity
@@ -13,10 +14,12 @@ fun CanvasDrawing.toCanvasEntity(): CanvasEntity {
         id = this.id,
         title = this.title,
         canvasStrokesDto = this.canvasStrokes.map { it.toCanvasStrokeDto() },
+        pageFormat = this.pageFormat,
+        pageColor = this.pageColor,
         thumbnailPath = this.thumbnailPath,
         createdDate = this.createdDate,
         modifiedDate = this.modifiedDate,
-        deletedAt = this.deletedAt
+        deletedDate = this.deletedDate
     )
 }
 
@@ -27,7 +30,7 @@ fun CanvasSummaryEntity.toCanvasSummary(): CanvasSummary {
         thumbnailPath = this.thumbnailPath,
         createdDate = this.createdDate,
         modifiedDate = this.modifiedDate,
-        deletedAt = this.deletedAt
+        deletedDate = this.deletedDate
     )
 }
 
@@ -36,30 +39,34 @@ fun CanvasEntity.toCanvasDrawing(): CanvasDrawing {
         id = this.id,
         title = this.title,
         canvasStrokes = this.canvasStrokesDto.map { it.toCanvasStroke() },
+        pageFormat = this.pageFormat,
+        pageColor = this.pageColor,
         thumbnailPath = this.thumbnailPath,
         createdDate = this.createdDate,
         modifiedDate = this.modifiedDate,
-        deletedAt = this.deletedAt
+        deletedDate = this.deletedDate
     )
 }
 
 fun CanvasStroke.toCanvasStrokeDto(): CanvasStrokeEntity {
     return CanvasStrokeEntity(
-        xCoordinate = this.xCoordinate,
-        yCoordinate = this.yCoordinate,
-        pen = this.pen.name,
-        strokePx = this.strokePx,
-        color = this.color
+        x = this.x,
+        y = this.y,
+        penType = this.penType.name,
+        brushSizePx = this.brushSizePx,
+        brushSizeNormalized = this.brushSizeNormalized,
+        colorArgb = this.colorArgb
     )
 }
 
 fun CanvasStrokeEntity.toCanvasStroke(): CanvasStroke {
     return CanvasStroke(
-        xCoordinate = this.xCoordinate,
-        yCoordinate = this.yCoordinate,
-        pen = PEN.valueOf(this.pen),
-        strokePx = this.strokePx,
-        color = this.color
+        x = this.x,
+        y = this.y,
+        penType = PEN.valueOf(this.penType),
+        brushSizePx = this.brushSizePx,
+        brushSizeNormalized = this.brushSizeNormalized,
+        colorArgb = this.colorArgb
     )
 }
 

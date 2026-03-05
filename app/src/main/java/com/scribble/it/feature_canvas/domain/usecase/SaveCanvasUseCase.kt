@@ -8,24 +8,26 @@ import com.scribble.it.feature_canvas.core.graphics.error.ThumbnailError
 import com.scribble.it.feature_canvas.domain.model.canvas.CanvasDrawing
 import com.scribble.it.feature_canvas.domain.repository.CanvasRepository
 import com.scribble.it.feature_canvas.domain.error.CanvasError
+import com.scribble.it.feature_canvas.domain.model.usecaseResult.SaveUsesCaseResult
 import com.scribble.it.feature_canvas.domain.result.Result
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import javax.inject.Inject
 
-class SaveCanvasUseCase(
+class SaveCanvasUseCase @Inject constructor(
     private val canvasRepository: CanvasRepository,
     private val thumbnailGenerator: ThumbnailGenerator
 ) {
-    operator fun invoke(canvasDrawing: CanvasDrawing): Flow<Result<Unit, CanvasError>> = flow {
+    operator fun invoke(canvasDrawing: CanvasDrawing): Flow<Result<SaveUsesCaseResult, CanvasError>> = flow {
         emit(Result.Loading)
 
-        if (canvasDrawing.title.isBlank()) {
+        if (canvasDrawing.title.isEmpty()) {
             emit(Result.Error(CanvasError.INVALID_TITLE))
             return@flow
         }
 
         try {
-            val thumbnailPath = thumbnailGenerator.generateAndSave(canvasStrokes = canvasDrawing.canvasStrokes)
+            val thumbnailPath = thumbnailGenerator.generateAndSave(canvasDrawing = canvasDrawing)
 
             val now = System.currentTimeMillis()
             val canvasWithTimeStampsAndThumbnail = canvasDrawing.copy(
@@ -34,13 +36,16 @@ class SaveCanvasUseCase(
                 thumbnailPath = thumbnailPath
             )
 
-            canvasRepository.upsertCanvas(canvasWithTimeStampsAndThumbnail)
-            emit(Result.Success(Unit))
+            val resultId = canvasRepository.upsertCanvas(canvasWithTimeStampsAndThumbnail)
+            val result = SaveUsesCaseResult(
+                id = resultId,
+                title = canvasDrawing.title,
+                thumbnailPath = thumbnailPath
+            )
+            emit(Result.Success(result))
         } catch (e: SQLException) {
             emit(Result.Error(CanvasError.DATABASE_ERROR))
-        } catch (e: Exception) {
-            emit(Result.Error(CanvasError.UNKNOWN_ERROR))
-        } catch (e: ThumbnailError) {
+        }  catch (e: ThumbnailError) {
             // Convert thumbnail error to canvas error with details
             when (e) {
                 is ThumbnailError.GenerateError -> {
@@ -61,6 +66,9 @@ class SaveCanvasUseCase(
 
                 ThumbnailError.EmptyDataError -> emit(Result.Error(CanvasError.INVALID_CANVAS_LIST))
             }
+        }
+        catch (e: Exception) {
+            emit(Result.Error(CanvasError.UNKNOWN_ERROR))
         }
     }
 }

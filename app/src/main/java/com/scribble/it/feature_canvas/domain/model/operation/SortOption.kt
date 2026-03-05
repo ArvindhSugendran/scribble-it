@@ -8,3 +8,12 @@ enum class SortOption {
     MODIFIED_DATE_ASC,
     MODIFIED_DATE_DESC
 }
+
+fun SortOption.displayName(): String = when (this) {
+    SortOption.TITLE_ASC -> "Title ↑"
+    SortOption.TITLE_DESC -> "Title ↓"
+    SortOption.CREATED_DATE_ASC -> "Created ↑"
+    SortOption.CREATED_DATE_DESC -> "Created ↓"
+    SortOption.MODIFIED_DATE_ASC -> "Modified ↑"
+    SortOption.MODIFIED_DATE_DESC -> "Modified ↓"
+}

@@ -1,5 +1,6 @@
 package com.scribble.it.ui.theme
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 
 // =======================
@@ -64,3 +65,10 @@ val Graphite80 = Color(0xFFCFC6BD)
 val Graphite90 = Color(0xFFE7E1DB)
 val Graphite95 = Color(0xFFF2EDE8)
 val Graphite99 = Color(0xFFFCFAF8)
+
+// Custom Colors
+@Immutable
+data class ScribbleColors(
+    val canvasDrawIconBackground: Color,
+    val canvasDrawActionButtonRipple: Color
+)

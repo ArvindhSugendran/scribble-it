@@ -98,9 +98,9 @@ private fun expandedMetrics(
         HeightClass.COMPACT -> {
             OnboardingBottomMetrics(
                 horizontalPadding = s.w(0.04f),
-                verticalSpacing = s.h(0.02f),
+                verticalSpacing = s.h(0.025f),
                 dotSize = s.min(0.04f),
-                buttonTextFontSize = 12.sp
+                buttonTextFontSize = 14.sp
             )
         }
 

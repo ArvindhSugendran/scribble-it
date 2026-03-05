@@ -56,7 +56,6 @@ fun OnboardingPageContent(
     titleFontSize: TextUnit = 28.sp,
     descriptionFontSize: TextUnit = 16.sp) {
 
-
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.Center,
@@ -82,19 +81,6 @@ fun OnboardingPageContent(
                         offset = DpOffset(x = 6.dp, 7.dp)
                     )
                 ),
-//                .dropShadow(
-//                    shape = MaterialTheme.shapes.large,
-//                    shadow = Shadow(
-//                        radius = 10.dp,
-//                        spread = 6.dp,
-//                        color = Color(0x40000000),
-//                        offset = DpOffset(x = 0.dp, y = 0.dp)
-//                    )
-//                )
-//                .background(
-//                    color = pageData.backgroundColor,
-//                    shape = MaterialTheme.shapes.large
-//                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(

@@ -8,15 +8,21 @@ import kotlinx.coroutines.flow.Flow
 interface CanvasRepository {
     fun getPagingCanvases(query: String, sortOption: String, isRecycled: Boolean): Flow<PagingData<CanvasSummary>>
 
-    suspend fun getCanvasById(canvasId: Int): CanvasDrawing?
+    suspend fun generateScribbleTitle(): Int?
 
-    suspend fun upsertCanvas(canvasDrawing: CanvasDrawing)
+    suspend fun getCanvasById(canvasId: Long): CanvasDrawing?
 
-    suspend fun deleteCanvases(canvases: List<CanvasDrawing>)
+    suspend fun getCanvasesByIds(canvasIds: Set<Long>): List<CanvasDrawing>
 
-    suspend fun recycleCanvases(canvasIds: List<Int>, timeStamp: Long)
+    suspend fun upsertCanvas(canvasDrawing: CanvasDrawing): Long
 
-    suspend fun restoreCanvases(canvasIds: List<Int>)
+    suspend fun deleteCanvases(canvases: List<CanvasDrawing>): Int
 
-    suspend fun deleteOldRecycledCanvases(timeStampLimit: Long)
+    suspend fun deleteCanvasesById(canvasIds: Set<Long>): Int
+
+    suspend fun deleteOldRecycledCanvases(timeStampLimit: Long): Int
+
+    suspend fun recycleCanvases(canvasIds: Set<Long>, timeStamp: Long): Int
+
+    suspend fun restoreCanvases(canvasIds: Set<Long>): Int
 }

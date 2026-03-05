@@ -6,8 +6,9 @@ import com.scribble.it.feature_canvas.domain.model.canvasSummary.CanvasSummary
 import com.scribble.it.feature_canvas.domain.model.operation.SortOption
 import com.scribble.it.feature_canvas.domain.repository.CanvasRepository
 import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
 
-class GetPagingCanvasesUseCase(
+class GetPagingCanvasesUseCase @Inject constructor(
     private val canvasRepository: CanvasRepository
 ) {
     operator fun invoke(

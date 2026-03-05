@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "080c646b542db5854278a29657deb8f7",
+    "identityHash": "fbf6b419f93d540c1028a6a916979920",
     "entities": [
       {
         "tableName": "canvas_table",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `title` TEXT NOT NULL, `canvasStrokes` TEXT NOT NULL, `thumbnailPath` TEXT, `createdDate` INTEGER NOT NULL, `modifiedDate` INTEGER NOT NULL, `deletedAt` INTEGER)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `title` TEXT NOT NULL, `canvasStrokes` TEXT NOT NULL, `pageFormat` TEXT NOT NULL, `pageColor` INTEGER NOT NULL, `thumbnailPath` TEXT, `createdDate` INTEGER NOT NULL, `modifiedDate` INTEGER NOT NULL, `deletedDate` INTEGER)",
         "fields": [
           {
             "fieldPath": "id",
@@ -23,6 +23,18 @@
             "fieldPath": "canvasStrokesDto",
             "columnName": "canvasStrokes",
             "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pageFormat",
+            "columnName": "pageFormat",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pageColor",
+            "columnName": "pageColor",
+            "affinity": "INTEGER",
             "notNull": true
           },
           {
@@ -43,8 +55,8 @@
             "notNull": true
           },
           {
-            "fieldPath": "deletedAt",
-            "columnName": "deletedAt",
+            "fieldPath": "deletedDate",
+            "columnName": "deletedDate",
             "affinity": "INTEGER"
           }
         ],
@@ -58,7 +70,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '080c646b542db5854278a29657deb8f7')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'fbf6b419f93d540c1028a6a916979920')"
     ]
   }
 }
