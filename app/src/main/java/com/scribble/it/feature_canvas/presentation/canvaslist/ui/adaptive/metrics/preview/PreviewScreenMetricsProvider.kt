@@ -1,6 +1,8 @@
 package com.scribble.it.feature_canvas.presentation.canvaslist.ui.adaptive.metrics.preview
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.dp
+import com.scribble.it.feature_canvas.presentation.canvasrecycle.ui.adaptive.metrics.CanvasRecycleScreenMetrics
 import com.scribble.it.ui.adaptive.layoutConfig.LayoutConfiguration
 import com.scribble.it.ui.adaptive.scale.HeightClass
 import com.scribble.it.ui.adaptive.scale.ScreenScale
@@ -12,63 +14,81 @@ fun rememberPreviewScreenMetrics(
     layout: LayoutConfiguration
 ): PreviewScreenMetrics {
     return when (layout.width) {
-        WidthClass.COMPACT -> compactMetrics(layout.height)
-        WidthClass.MEDIUM -> mediumMetrics(layout.height)
-        WidthClass.EXPANDED -> expandedMetrics(layout.height)
+        WidthClass.COMPACT -> compactMetrics(scale, layout.height)
+        WidthClass.MEDIUM -> mediumMetrics(scale, layout.height)
+        WidthClass.EXPANDED -> expandedMetrics(scale, layout.height)
         WidthClass.LARGE,
         WidthClass.EXTRA_LARGE -> TODO()
     }
 }
 
 private fun compactMetrics(
+    s: ScreenScale,
     heightClass: HeightClass
 ): PreviewScreenMetrics {
-    return when(heightClass) {
+    val previewScreenMetrics = PreviewScreenMetrics(
+        infoCardStyleChange = false
+    )
+
+    return when (heightClass) {
         HeightClass.COMPACT -> TODO()
         HeightClass.MEDIUM -> {
-            PreviewScreenMetrics(
-                infoCardStyleChange = false
+            previewScreenMetrics.copy(
+                illustrationSize = s.min(0.5f),
             )
         }
+
         HeightClass.EXPANDED -> {
-            PreviewScreenMetrics(
-                infoCardStyleChange = false
+            previewScreenMetrics.copy(
+                illustrationSize = s.min(0.6f),
             )
         }
     }
 }
 
 private fun mediumMetrics(
+    s: ScreenScale,
     heightClass: HeightClass
 ): PreviewScreenMetrics {
-    return when(heightClass) {
+    val previewScreenMetrics = PreviewScreenMetrics(
+        infoCardStyleChange = true
+    )
+
+    return when (heightClass) {
         HeightClass.COMPACT -> TODO()
         HeightClass.MEDIUM -> {
-            PreviewScreenMetrics(
-                infoCardStyleChange = true
+            previewScreenMetrics.copy(
+                illustrationSize = s.min(0.5f),
             )
         }
+
         HeightClass.EXPANDED -> {
-            PreviewScreenMetrics(
-                infoCardStyleChange = true
+            previewScreenMetrics.copy(
+                illustrationSize = s.min(0.6f),
             )
         }
     }
 }
 
 private fun expandedMetrics(
+    s: ScreenScale,
     heightClass: HeightClass
 ): PreviewScreenMetrics {
-    return when(heightClass) {
+    val previewScreenMetrics = PreviewScreenMetrics(
+        infoCardStyleChange = true
+    )
+
+    return when (heightClass) {
         HeightClass.COMPACT -> TODO()
         HeightClass.MEDIUM -> {
-            PreviewScreenMetrics(
-                infoCardStyleChange = true
+            previewScreenMetrics.copy(
+                illustrationSize = s.min(0.5f),
             )
         }
+
         HeightClass.EXPANDED -> {
-            PreviewScreenMetrics(
-                infoCardStyleChange = true
+            previewScreenMetrics.copy(
+                illustrationSize = s.min(0.6f),
             )
         }
     }

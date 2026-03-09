@@ -3,12 +3,17 @@ package com.scribble.it.feature_canvas.presentation.canvaslist.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
 import androidx.paging.cachedIn
 import com.scribble.it.feature_canvas.domain.error.CanvasError
 import com.scribble.it.feature_canvas.domain.model.canvasSummary.CanvasSummary
 import com.scribble.it.feature_canvas.domain.model.operation.ArchiveAction
 import com.scribble.it.feature_canvas.domain.model.usecaseResult.ArchiveUseCaseResult
+import com.scribble.it.feature_canvas.domain.repository.CanvasRepository
 import com.scribble.it.feature_canvas.domain.result.Result
 import com.scribble.it.feature_canvas.domain.usecase.ArchiveCanvasesUseCase
 import com.scribble.it.feature_canvas.domain.usecase.GetPagingCanvasesUseCase
@@ -21,6 +26,7 @@ import com.scribble.it.feature_canvas.presentation.common.action.BulkActionEvent
 import com.scribble.it.feature_canvas.presentation.common.action.BulkRecycleActionType
 import com.scribble.it.feature_canvas.presentation.common.action.CanvasItemClickType
 import com.scribble.it.feature_canvas.presentation.common.dialog.state.ConfirmationDialogState
+import com.scribble.it.feature_canvas.presentation.common.state.CanvasViewMode
 import com.scribble.it.feature_canvas.presentation.common.state.TopBarMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -46,6 +52,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CanvasListViewModel @Inject constructor(
+    private val canvasRepository: CanvasRepository,
     private val getPagingCanvasesUseCase: GetPagingCanvasesUseCase,
     private val archiveCanvasesUseCase: ArchiveCanvasesUseCase
 ) : ViewModel() {
@@ -79,6 +86,24 @@ class CanvasListViewModel @Inject constructor(
             }
             .cachedIn(viewModelScope)
 
+//        refreshTrigger.onStart { emit(Unit) }
+//            .flatMapLatest {
+//                Pager(PagingConfig(pageSize = 1)) {
+//                    object : PagingSource<Int, CanvasSummary>() {
+//                        override suspend fun load(params: LoadParams<Int>): LoadResult<Int, CanvasSummary> {
+//                            return LoadResult.Page(
+//                                data = emptyList(),
+//                                prevKey = null,
+//                                nextKey = null
+//                            )
+//                        }
+//
+//                        override fun getRefreshKey(state: PagingState<Int, CanvasSummary>) = null
+//                    }
+//                }.flow
+//            }
+
+
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     val searchPagingFlow: Flow<PagingData<CanvasSummary>> =
         canvasListUiState
@@ -98,12 +123,10 @@ class CanvasListViewModel @Inject constructor(
             }
 
     init {
+        loadCanvasViewMode()
+
         _canvasListUiState.update { it.copy(isInitialLoading = true) }
-
         viewModelScope.launch {
-            // Trigger initial fetch
-            refreshTrigger.emit(Unit)
-
             // Wait until first Paging load completes
             basePagingFlow.collectLatest {
                 // When Paging emits data, hide initial loading
@@ -117,6 +140,18 @@ class CanvasListViewModel @Inject constructor(
             }
         }
     }
+
+    private fun loadCanvasViewMode() {
+        viewModelScope.launch {
+            canvasRepository.getCanvasViewMode()
+                .collectLatest { mode ->
+                    _canvasListUiState.update { state ->
+                        state.copy(canvasViewMode = mode)
+                    }
+                }
+        }
+    }
+
 
     fun viewAction(action: CanvasListAction) {
         when (action) {
@@ -134,8 +169,15 @@ class CanvasListViewModel @Inject constructor(
             is CanvasListAction.ToggleGridView -> {
                 _canvasListUiState.update { state ->
                     state.copy(
-                        isGrid = !state.isGrid
+                        canvasViewMode = if (state.canvasViewMode == CanvasViewMode.GRID)
+                            CanvasViewMode.LIST
+                        else
+                            CanvasViewMode.GRID
                     )
+                }
+
+                viewModelScope.launch {
+                    canvasRepository.setCanvasViewMode(_canvasListUiState.value.canvasViewMode)
                 }
             }
 
@@ -147,12 +189,7 @@ class CanvasListViewModel @Inject constructor(
 
             is CanvasListAction.SortClicked -> {
                 _canvasListUiState.update { state ->
-                    val newList =
-                        listOf(state.sortOption) +
-                                state.sortOptions.filter { it != state.sortOption }
-
                     state.copy(
-                        sortOptions = newList,
                         topBarMode = TopBarMode.SORT,
                     )
                 }
@@ -182,8 +219,8 @@ class CanvasListViewModel @Inject constructor(
                 _canvasListUiState.update { state ->
                     state.copy(
                         sortOption = action.sortOption,
+                        selectedScribbleId = -1,
                         shouldScrollToTop = true,
-                        selectedScribbleId = -1
                     )
                 }
             }
@@ -411,7 +448,7 @@ class CanvasListViewModel @Inject constructor(
 
                 _canvasListUiState.update { state ->
                     state.copy(
-                        paneState = action.paneState,
+                        paneState = if (reveal < 0.5f && _canvasListUiState.value.selectedScribbleId < 0) PaneState.TwoPane.Split else action.paneState,
                         paneReveal = if (reveal < 0.5f && _canvasListUiState.value.selectedScribbleId < 0) 0.5f else reveal,
                         selectedScribbleId = if (action.paneState == PaneState.TwoPane.FullList || action.paneState == PaneState.SinglePane) {
                             -1
@@ -420,6 +457,8 @@ class CanvasListViewModel @Inject constructor(
                         }
                     )
                 }
+
+                Log.d("TWO_PANE", "Local Reveal: ${_canvasListUiState.value.paneReveal}, PaneState: ${_canvasListUiState.value.paneState}")
             }
         }
     }

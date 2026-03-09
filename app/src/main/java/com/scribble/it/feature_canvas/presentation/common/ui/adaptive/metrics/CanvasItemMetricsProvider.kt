@@ -26,8 +26,6 @@ private fun compactMetrics(
     return CanvasItemMetrics(
         titleTextStyle = typography.bodyMedium,
         dateTextStyle = typography.bodySmall,
-        horizontalPadding = s.min(0.015f),
-        verticalPadding = s.min(0.006f)
     )
 }
 
@@ -38,8 +36,6 @@ private fun mediumMetrics(
     return CanvasItemMetrics(
         titleTextStyle = typography.bodyLarge,
         dateTextStyle = typography.bodyMedium,
-        horizontalPadding = s.min(0.02f),
-        verticalPadding = s.min(0.01f)
     )
 }
 
@@ -51,8 +47,6 @@ private fun expandedMetrics(
     return CanvasItemMetrics(
         titleTextStyle = typography.titleMedium,
         dateTextStyle = typography.bodyMedium,
-        horizontalPadding = s.min(0.025f),
-        verticalPadding = s.min(0.015f)
     )
 }
 

@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
@@ -20,8 +22,8 @@ import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.scribble.it.feature_canvas.domain.model.canvasSummary.CanvasSummary
+import com.scribble.it.feature_canvas.presentation.common.state.CanvasViewModeConfig
 import com.scribble.it.feature_canvas.presentation.common.ui.adaptive.metrics.CanvasItemMetrics
-import com.scribble.it.feature_canvas.presentation.common.ui.adaptive.metrics.CanvasGridMetrics
 import com.scribble.it.feature_canvas.presentation.common.ui.adaptive.metrics.retrieveCanvasGridMetrics
 import com.scribble.it.feature_canvas.presentation.common.ui.adaptive.metrics.retrieveCanvasItemMetrics
 import com.scribble.it.ui.adaptive.layoutConfig.getLayoutConfiguration
@@ -32,10 +34,8 @@ import kotlinx.coroutines.flow.flowOf
 @Composable
 fun CanvasList(
     modifier: Modifier = Modifier,
+    config: CanvasViewModeConfig,
     items: LazyPagingItems<CanvasSummary>,
-    gridState: LazyGridState,
-    canvasGridMetrics: CanvasGridMetrics,
-    itemMetrics: CanvasItemMetrics,
     isLoading: Boolean,
     isBlurred: Boolean,
     selectedIds: Set<Long>,
@@ -44,30 +44,56 @@ fun CanvasList(
     onClicked: (Long) -> Unit,
 ) {
 
-    if (isLoading) {
-        CanvasShimmerGrid(
-            modifier = modifier,
-            lazyGridState = rememberLazyGridState(),
-            gridCellsCount = canvasGridMetrics.gridCellsCount
-        )
-    } else {
-        CanvasGrid(
-            modifier = modifier,
-            userScrollEnabled = !isBlurred,
-            gridCellsCount = canvasGridMetrics.gridCellsCount,
-            lazyGridState = gridState,
-            itemMetrics = itemMetrics,
-            selectedIds = selectedIds,
-            selectedPreviewId = selectedPreviewId,
-            pagingItems = items,
-            onLongClicked = onLongClicked,
-            onClicked = onClicked
-        )
+    when (config) {
+        is CanvasViewModeConfig.Grid -> {
+            if (isLoading) {
+                CanvasShimmerGrid(
+                    modifier = modifier,
+                    lazyGridState = rememberLazyGridState(),
+                    gridCellsCount = config.gridMetrics!!.gridCellsCount
+                )
+            } else {
+                CanvasGridMode(
+                    modifier = modifier,
+                    userScrollEnabled = !isBlurred,
+                    gridCellsCount = config.gridMetrics!!.gridCellsCount,
+                    lazyGridState = config.state,
+                    itemMetrics = config.itemMetrics!!,
+                    selectedIds = selectedIds,
+                    selectedPreviewId = selectedPreviewId,
+                    pagingItems = items,
+                    onLongClicked = onLongClicked,
+                    onClicked = onClicked
+                )
+            }
+        }
+
+        is CanvasViewModeConfig.List -> {
+            if (isLoading) {
+                CanvasShimmerList(
+                    modifier = modifier,
+                    lazyGridState = rememberLazyListState(),
+                )
+            } else {
+                CanvasListMode(
+                    modifier = modifier,
+                    userScrollEnabled = !isBlurred,
+                    lazyListState = config.state,
+                    itemMetrics = config.itemMetrics!!,
+                    selectedIds = selectedIds,
+                    selectedPreviewId = selectedPreviewId,
+                    pagingItems = items,
+                    onLongClicked = onLongClicked,
+                    onClicked = onClicked
+                )
+            }
+        }
     }
+
 }
 
 @Composable
-private fun CanvasGrid(
+private fun CanvasGridMode(
     modifier: Modifier,
     gridCellsCount: Int,
     userScrollEnabled: Boolean,
@@ -79,6 +105,7 @@ private fun CanvasGrid(
     onClicked: (Long) -> Unit,
     onLongClicked: (Long) -> Unit
 ) {
+
     val animatedColumns by animateIntAsState(targetValue = gridCellsCount)
 
     CanvasGridLayout(
@@ -93,6 +120,46 @@ private fun CanvasGrid(
                 pagingItems[index]?.id ?: index
             }
         ) { index ->
+            val item = pagingItems[index] ?: return@items
+            CanvasGridItem(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateItem(),
+                itemMetrics = itemMetrics,
+                canvasSummary = item,
+                isSelected = selectedIds.contains(item.id),
+                isSelectedPreview = item.id == selectedPreviewId,
+                onClicked = { onClicked(it) },
+                onLongClicked = { onLongClicked(it) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun CanvasListMode(
+    modifier: Modifier,
+    userScrollEnabled: Boolean,
+    lazyListState: LazyListState,
+    itemMetrics: CanvasItemMetrics,
+    selectedIds: Set<Long>,
+    selectedPreviewId: Long,
+    pagingItems: LazyPagingItems<CanvasSummary>,
+    onClicked: (Long) -> Unit,
+    onLongClicked: (Long) -> Unit
+) {
+    CanvasListLayout(
+        modifier = modifier,
+        userScrollEnabled = userScrollEnabled,
+        state = lazyListState,
+    ) {
+        items(
+            count = pagingItems.itemCount,
+            key = { index ->
+                pagingItems[index]?.id ?: index
+            }
+        ) { index ->
+
             val item = pagingItems[index] ?: return@items
             CanvasListItem(
                 modifier = Modifier
@@ -120,6 +187,24 @@ private fun CanvasShimmerGrid(
         userScrollEnabled = false,
         state = lazyGridState,
         gridCellsCount = gridCellsCount
+    ) {
+        items(15) {
+            CanvasGridShimmerItem(
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+@Composable
+private fun CanvasShimmerList(
+    modifier: Modifier,
+    lazyGridState: LazyListState,
+) {
+    CanvasListLayout (
+        modifier = modifier,
+        userScrollEnabled = false,
+        state = lazyGridState,
     ) {
         items(15) {
             CanvasListShimmerItem(
@@ -190,15 +275,19 @@ fun CanvasListPreview() {
             )
         }
 
+        val config = CanvasViewModeConfig.Grid(
+            state = rememberLazyGridState(),
+            itemMetrics = canvasItemMetrics,
+            gridMetrics = canvasGridMetrics
+        )
+
         CanvasList(
             modifier = Modifier
                 .fillMaxSize(),
             isLoading = isLoading,
             isBlurred = false,
             items = fakePagingItems,
-            gridState = rememberLazyGridState(),
-            canvasGridMetrics = canvasGridMetrics,
-            itemMetrics = canvasItemMetrics,
+            config = config,
             selectedIds = setOf(1, 2, 3),
             onClicked = {},
             onLongClicked = {},

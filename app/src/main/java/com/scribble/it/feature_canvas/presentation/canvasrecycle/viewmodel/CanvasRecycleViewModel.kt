@@ -11,6 +11,7 @@ import com.scribble.it.feature_canvas.domain.model.operation.ArchiveAction
 import com.scribble.it.feature_canvas.domain.model.operation.DeleteRequest
 import com.scribble.it.feature_canvas.domain.model.usecaseResult.ArchiveUseCaseResult
 import com.scribble.it.feature_canvas.domain.model.usecaseResult.DeleteUseCaseResult
+import com.scribble.it.feature_canvas.domain.repository.CanvasRepository
 import com.scribble.it.feature_canvas.domain.result.Result
 import com.scribble.it.feature_canvas.domain.usecase.ArchiveCanvasesUseCase
 import com.scribble.it.feature_canvas.domain.usecase.DeleteCanvasesUseCase
@@ -42,6 +43,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CanvasRecycleViewModel @Inject constructor(
+    private val canvasRepository: CanvasRepository,
     private val getPagingCanvasesUseCase: GetPagingCanvasesUseCase,
     private val deleteCanvasesUseCase: DeleteCanvasesUseCase,
     private val archiveCanvasesUseCase: ArchiveCanvasesUseCase
@@ -70,12 +72,10 @@ class CanvasRecycleViewModel @Inject constructor(
             .cachedIn(viewModelScope)
 
     init {
+        loadCanvasViewMode()
+
         _canvasRecycleUiState.update { it.copy(isInitialLoading = true) }
-
         viewModelScope.launch {
-            // Trigger initial fetch
-            refreshTrigger.emit(Unit)
-
             // Wait until first Paging load completes
             recyclePagingFlow.collectLatest {
                 delay(2000)
@@ -85,6 +85,18 @@ class CanvasRecycleViewModel @Inject constructor(
             }
         }
     }
+
+    private fun loadCanvasViewMode() {
+        viewModelScope.launch {
+            canvasRepository.getCanvasViewMode()
+                .collectLatest { mode ->
+                    _canvasRecycleUiState.update { state ->
+                        state.copy(canvasViewMode = mode)
+                    }
+                }
+        }
+    }
+
 
     fun viewAction(action: CanvasRecycleAction) {
         when (action) {
@@ -204,10 +216,10 @@ class CanvasRecycleViewModel @Inject constructor(
                     is BulkActionEvent.Request -> {
                         val (title, message) = when (event.type) {
                             BulkRecycleActionType.DELETE_ALL ->
-                                "Delete Permanently" to "This cannot be undone."
+                                "Delete Forever" to "This cannot be undone."
 
                             BulkRecycleActionType.RESTORE_ALL ->
-                                "Restore Canvases" to "Items will be restored."
+                                "Restore" to "Items will be restored."
 
                             else -> return
                         }

@@ -51,6 +51,9 @@ interface ScribbleDao {
     """)
     suspend fun getMaxScribbleNumber(): Int?
 
+    @Query("SELECT MAX(autoTitleIndex) FROM canvas_table")
+    suspend fun getMaxAutoTitleIndex(): Int?
+
     @Query("SELECT * FROM canvas_table WHERE id = :canvasId")
     suspend fun getCanvasById(canvasId: Long): CanvasEntity?
 

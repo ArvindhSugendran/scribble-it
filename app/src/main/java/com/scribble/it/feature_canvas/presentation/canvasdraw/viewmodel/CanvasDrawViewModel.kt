@@ -86,6 +86,7 @@ class CanvasDrawViewModel @Inject constructor(
                                 "CanvasById",
                                 result.error.toString()
                             )
+
                             is Result.Loading -> Log.d("CanvasById", "LOADING")
                             is Result.Success -> {
                                 Log.d("CanvasById", "Result: ${result.data}")
@@ -95,7 +96,7 @@ class CanvasDrawViewModel @Inject constructor(
                                     it.copy(
                                         canvasDrawing = canvasDrawing,
                                         canvasTitle = TextFieldValue(canvasDrawing.title),
-                                        strokeColor = if(canvasDrawing.pageColor == Color.Black.toArgb()) Color.White else Color.Black
+                                        strokeColor = if (canvasDrawing.pageColor == Color.Black.toArgb()) Color.White else Color.Black
                                     )
                                 }
                             }
@@ -127,6 +128,7 @@ class CanvasDrawViewModel @Inject constructor(
                         strokeColor = fixedBrushColor,
                     )
                 }
+                markDirty()
             }
 
             is CanvasDrawAction.ChangeStrokeColor -> {
@@ -144,7 +146,10 @@ class CanvasDrawViewModel @Inject constructor(
                 )
             }
 
-            is CanvasDrawAction.OnTitleChange -> _canvasDrawUiState.update { it.copy(canvasTitle = action.title) }
+            is CanvasDrawAction.OnTitleChange -> {
+                markDirty()
+                _canvasDrawUiState.update { it.copy(canvasTitle = action.title) }
+            }
 
             is CanvasDrawAction.ShowStrokeOptions -> _canvasDrawUiState.update {
                 it.copy(
@@ -293,31 +298,52 @@ class CanvasDrawViewModel @Inject constructor(
             return
         }
 
-        val finalTitle = if (state.canvasTitle.text.isBlank() && canvas.id == null) {
-            generateScribbleTitleUseCase()
-        } else {
-            state.canvasTitle.text.ifBlank { canvas.title }
+        val inputTitle = state.canvasTitle.text
+
+        val (finalTitle, autoIndex) = when {
+            canvas.id == null && inputTitle.isBlank() -> {
+                val (title, autoTitleIndex) = generateScribbleTitleUseCase()
+                title to autoTitleIndex
+            }
+            canvas.autoTitleIndex != null -> {
+                if (inputTitle.isBlank()) {
+                    canvas.title to canvas.autoTitleIndex
+                } else if (inputTitle == canvas.title) {
+                    canvas.title to canvas.autoTitleIndex
+                } else {
+                    inputTitle to null
+                }
+            }
+            else -> {
+                if (inputTitle.isBlank())
+                    canvas.title to null
+                else
+                    inputTitle to null
+            }
         }
 
-        val updatedCanvas = canvas.copy(title = finalTitle)
+        Log.d("CanvasSave", "AutoIndex: $autoIndex")
+
+        val updatedCanvas = canvas.copy(title = finalTitle, autoTitleIndex = autoIndex)
 
         saveCanvasUseCase(updatedCanvas).collectLatest { result ->
             when (result) {
                 is Result.Error -> Log.d("CanvasSave", result.error.toString())
                 is Result.Loading -> Log.d("CanvasSave", "LOADING")
                 is Result.Success -> {
+                    lastSavedVersion = contentVersion
+
                     Log.d("CanvasSave", "Result: ${result.data}")
                     _canvasDrawUiState.update { state ->
                         state.copy(
                             canvasDrawing = state.canvasDrawing.copy(
                                 id = result.data.id,
                                 title = result.data.title,
+                                autoTitleIndex = result.data.autoIndex,
                                 thumbnailPath = result.data.thumbnailPath
                             )
                         )
                     }
-
-                    lastSavedVersion = contentVersion
                 }
             }
         }
@@ -360,6 +386,7 @@ class CanvasDrawViewModel @Inject constructor(
     }
 
     private fun markDirty() {
+        Log.d("CanvasSave", "MARK DIRTY")
         contentVersion++
     }
 }

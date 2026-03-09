@@ -7,6 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,13 +15,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -31,7 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.scribble.it.feature_canvas.presentation.canvasdraw.state.PageFormat
 
 @Composable
-fun CanvasListShimmerItem(
+fun CanvasGridShimmerItem(
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(
@@ -39,7 +37,7 @@ fun CanvasListShimmerItem(
     ) {
         val cardWidth = maxWidth
 
-        val cardWidthPx = with(LocalDensity.current) { cardWidth.toPx() }
+        val cardWidthPx = with(LocalDensity.current) {cardWidth.toPx()}
         val gradientWidthPx = 0.2f * cardWidthPx
 
         val gradientTransition = rememberInfiniteTransition()
@@ -68,57 +66,57 @@ fun CanvasListShimmerItem(
             end = Offset(xCardShimmer, xCardShimmer)
         )
 
-        Row(
-            modifier = modifier
-                .clip(RoundedCornerShape(12.dp))
-                .height(120.dp)
-                .background(brush),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Column {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(brush)
+            ) {
+                Spacer(
+                    modifier = Modifier
+                        .aspectRatio(PageFormat.A4.aspectRatio)
+                )
+            }
 
             Spacer(
                 modifier = Modifier
-                    .height(120.dp)
-                    .aspectRatio(PageFormat.A4.aspectRatio)
+                    .height(12.dp)
             )
 
-            VerticalDivider(
-                thickness = 1.dp,
-                color = MaterialTheme.colorScheme.surfaceVariant
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(cardWidth / 15)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(brush)
             )
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(
+                modifier = Modifier
+                    .height(12.dp)
+            )
 
-            Column(modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
 
                 Spacer(
                     modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .height(cardWidth / 25)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(brush)
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Spacer(
-                    modifier = Modifier
-                        .fillMaxWidth(0.5f)
-                        .height(cardWidth / 25)
+                        .weight(1f)
+                        .height(cardWidth / 15)
                         .clip(RoundedCornerShape(12.dp))
                         .background(brush)
                 )
             }
-
-            Spacer(modifier = Modifier.width(12.dp))
         }
     }
 }
 
 @Preview
 @Composable
-fun CanvasListShimmerItemPreview() {
-    CanvasListShimmerItem(
+fun CanvasGridShimmerItemPreview() {
+    CanvasGridShimmerItem(
         modifier = Modifier
             .fillMaxWidth()
     )

@@ -6,13 +6,13 @@ import javax.inject.Inject
 class GenerateScribbleTitleUseCase @Inject constructor(
     private val canvasRepository: CanvasRepository
 ) {
-    suspend operator fun invoke(): String {
+    suspend operator fun invoke(): Pair<String, Int> {
         return try {
-            val max = canvasRepository.generateScribbleTitle() ?: 0
-            val next = max + 1
-            "Scribble %02d".format(next)
+            val maxIndex = canvasRepository.getMaxAutoTitleIndex() ?: 0
+            val nextIndex = maxIndex + 1
+            return "Scribble %02d".format(nextIndex) to nextIndex
         } catch (e: Exception) {
-            "Scribble"
+            "Scribble" to 0
         }
     }
 }

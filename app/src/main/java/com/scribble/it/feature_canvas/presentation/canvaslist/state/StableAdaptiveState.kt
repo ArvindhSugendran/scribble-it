@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 
 class StableAdaptiveState {
     private var frozenWidth by mutableStateOf<Dp?>(null)
@@ -20,7 +21,7 @@ class StableAdaptiveState {
     }
 
     fun commit(localReveal: Float, width: Dp?) {
-        frozenWidth = if(localReveal == 0.5f && width == null) {
+        frozenWidth = if((localReveal == 0.5f && width == null) || width == 0.dp) {
             halfWidth
         } else {
             width

@@ -40,6 +40,7 @@ class SaveCanvasUseCase @Inject constructor(
             val result = SaveUsesCaseResult(
                 id = resultId,
                 title = canvasDrawing.title,
+                autoIndex = canvasDrawing.autoTitleIndex,
                 thumbnailPath = thumbnailPath
             )
             emit(Result.Success(result))

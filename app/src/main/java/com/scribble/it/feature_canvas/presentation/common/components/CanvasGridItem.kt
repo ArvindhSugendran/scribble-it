@@ -5,21 +5,17 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,7 +36,7 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun CanvasListItem(
+fun CanvasGridItem(
     modifier: Modifier = Modifier,
     itemMetrics: CanvasItemMetrics,
     canvasSummary: CanvasSummary,
@@ -49,6 +45,7 @@ fun CanvasListItem(
     onLongClicked: (Long) -> Unit,
     onClicked: (Long) -> Unit
 ) {
+
     val border = if (isSelectedPreview) {
         Modifier
             .border(
@@ -64,11 +61,10 @@ fun CanvasListItem(
         )
     }
 
-    Row(
+    Box(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .then(border)
-            .height(120.dp)
             .combinedClickable(
                 onClick = {
                     canvasSummary.id?.let { onClicked(it) }
@@ -76,51 +72,30 @@ fun CanvasListItem(
                 onLongClick = {
                     canvasSummary.id?.let { onLongClicked(it) }
                 }
-            ),
-        verticalAlignment = Alignment.CenterVertically
+            )
     ) {
-        Box(
-            modifier = Modifier
-                .aspectRatio(PageFormat.A4.aspectRatio)
-        ) {
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(PageFormat.A4.aspectRatio)
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(canvasSummary.thumbnailPath)
+                        .build(),
+                    contentDescription = "canvas-thumbnail",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
 
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(canvasSummary.thumbnailPath)
-                    .build(),
-                contentDescription = "canvas-thumbnail",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+            HorizontalDivider(
+                modifier = Modifier.fillMaxWidth(),
+                thickness = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant
             )
 
-            if (isSelected) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                        )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "Selected",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .fillMaxSize(0.25f)
-                    )
-                }
-            }
-        }
-
-        VerticalDivider(
-            thickness = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant
-        )
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = canvasSummary.title,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -132,7 +107,7 @@ fun CanvasListItem(
             )
 
             Text(
-                text = canvasSummary.createdDate.toDateStrings(),
+                text = canvasSummary.createdDate.toDateString(),
                 style = itemMetrics.dateTextStyle,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 overflow = TextOverflow.Ellipsis,
@@ -141,14 +116,31 @@ fun CanvasListItem(
                     .padding(horizontal = 6.dp, vertical = 3.dp)
             )
         }
+
+        if (isSelected) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = "Selected",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .fillMaxSize(0.25f)
+                )
+            }
+        }
     }
 }
 
-
 @Preview
 @Composable
-fun CanvasListItemPreview() {
-
+fun CanvasGridItemPreview() {
     val sampleCanvas = CanvasSummary(
         id = 1,
         title = "My First Sketch",
@@ -158,7 +150,7 @@ fun CanvasListItemPreview() {
         deletedDate = null
     )
 
-    CanvasListItem(
+    CanvasGridItem(
         modifier = Modifier
             .fillMaxWidth(),
         itemMetrics = CanvasItemMetrics(
@@ -173,7 +165,7 @@ fun CanvasListItemPreview() {
     )
 }
 
-fun Long.toDateStrings(
+fun Long.toDateString(
     pattern: String = "MMM dd yyyy • hh:mm a"
 ): String {
     val formatter = SimpleDateFormat(pattern, Locale.getDefault())

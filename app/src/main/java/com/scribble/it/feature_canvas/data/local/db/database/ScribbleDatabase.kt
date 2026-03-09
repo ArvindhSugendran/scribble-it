@@ -10,7 +10,7 @@ import com.scribble.it.feature_canvas.data.local.db.entities.CanvasEntity
 
 @Database(
     entities = [CanvasEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(

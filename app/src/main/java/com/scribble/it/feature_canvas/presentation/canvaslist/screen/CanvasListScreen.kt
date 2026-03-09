@@ -1,7 +1,6 @@
 package com.scribble.it.feature_canvas.presentation.canvaslist.screen
 
 import android.annotation.SuppressLint
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -43,9 +42,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
@@ -53,13 +50,12 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.ImageNotSupported
 import androidx.compose.material.icons.filled.Recycling
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -84,38 +80,32 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.draw.innerShadow
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.min
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -125,11 +115,8 @@ import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.scribble.it.feature_canvas.domain.model.canvasSummary.CanvasSummary
 import com.scribble.it.feature_canvas.presentation.canvasdraw.navigation.CanvasDrawRoute
-import com.scribble.it.feature_canvas.presentation.canvasdraw.state.PageFormat
 import com.scribble.it.feature_canvas.presentation.canvaslist.action.CanvasListAction
 import com.scribble.it.feature_canvas.presentation.common.components.CanvasAppBar
 import com.scribble.it.feature_canvas.presentation.common.components.CanvasDeleteBar
@@ -137,7 +124,6 @@ import com.scribble.it.feature_canvas.presentation.canvaslist.components.canvasP
 import com.scribble.it.feature_canvas.presentation.common.components.CanvasList
 import com.scribble.it.feature_canvas.presentation.canvaslist.components.canvasPane.CanvasSearchBar
 import com.scribble.it.feature_canvas.presentation.canvaslist.components.canvasPane.CanvasSortBar
-import com.scribble.it.feature_canvas.presentation.canvaslist.components.previewPane.PreviewCanvasAppBar
 import com.scribble.it.feature_canvas.presentation.canvaslist.components.previewPane.PreviewContent
 import com.scribble.it.feature_canvas.presentation.canvaslist.event.CanvasListEvent
 import com.scribble.it.feature_canvas.presentation.canvaslist.state.CanvasListUiState
@@ -155,6 +141,8 @@ import com.scribble.it.feature_canvas.presentation.common.action.BulkRecycleActi
 import com.scribble.it.feature_canvas.presentation.common.action.CanvasItemClickType
 import com.scribble.it.feature_canvas.presentation.common.action.CanvasItemInteraction
 import com.scribble.it.feature_canvas.presentation.common.components.ConfirmationDialog
+import com.scribble.it.feature_canvas.presentation.common.state.CanvasViewMode
+import com.scribble.it.feature_canvas.presentation.common.state.CanvasViewModeConfig
 import com.scribble.it.ui.adaptive.layoutConfig.getLayoutConfiguration
 import com.scribble.it.ui.adaptive.layoutConfig.getPaneLayoutConfiguration
 import com.scribble.it.ui.adaptive.layoutConfig.isTwoPaneAllowed
@@ -202,8 +190,12 @@ fun CanvasListScreen(
     val focusRequester = remember { FocusRequester() }
     val stableAdaptiveState = rememberStableAdaptiveState()
 
-    val canvasListGridState = rememberLazyGridState()
-    val searchResultsListGridState = rememberLazyGridState()
+    val canvasGridState = rememberLazyGridState()
+    val canvasListState = rememberLazyListState()
+
+    val searchResultsGridState = rememberLazyGridState()
+    val searchResultsListState = rememberLazyListState()
+
     val sortOptionsListState = rememberLazyListState()
     val pullRefreshState = rememberPullToRefreshState()
     val imeVisible = rememberImeVisible()
@@ -279,7 +271,7 @@ fun CanvasListScreen(
 
     LaunchedEffect(showSortBar) {
         if (showSortBar) {
-            sortOptionsListState.scrollToItem(0)
+            sortOptionsListState.scrollToItem(uiState.sortOptions.indexOf(uiState.sortOption))
         }
     }
 
@@ -300,7 +292,7 @@ fun CanvasListScreen(
                             onAction(CanvasListAction.UpdateShowSearchEmpty(showEmptyResultsText = showEmpty))
 
                             if (count > 0) {
-                                searchResultsListGridState.scrollToItem(0)
+                                searchResultsGridState.scrollToItem(0)
                             }
                             searchCycleStarted = false
                         }
@@ -316,27 +308,53 @@ fun CanvasListScreen(
 
     LaunchedEffect(basePagingItems.loadState.refresh) {
         if (basePagingItems.loadState.refresh is LoadState.NotLoading && uiState.shouldScrollToTop) {
-            canvasListGridState.animateScrollToItem(0, 0)
+            when(uiState.canvasViewMode) {
+                CanvasViewMode.LIST -> canvasListState.animateScrollToItem(0)
+                CanvasViewMode.GRID -> canvasGridState.animateScrollToItem(0, 0)
+            }
             onAction(CanvasListAction.ConsumedScrollToTop)
         }
     }
 
-    LaunchedEffect(selectedIndex) {
-        if (selectedIndex > 0) {
-            val offsetPx = with(density) { 50.dp.roundToPx() }
-            canvasListGridState.animateScrollToItem(selectedIndex, scrollOffset = (-offsetPx))
+    LaunchedEffect(selectedIndex, uiState.canvasViewMode) {
+        val offsetPx = with(density) { 50.dp.roundToPx() }
+
+        when (uiState.canvasViewMode) {
+            CanvasViewMode.LIST -> {
+                if (selectedIndex != -1) {
+                    canvasListState.animateScrollToItem(selectedIndex)
+                } else {
+                    canvasListState.animateScrollToItem(0)
+                }
+            }
+
+            CanvasViewMode.GRID -> {
+                if (selectedIndex != -1) {
+                    canvasGridState.animateScrollToItem(selectedIndex, scrollOffset = (-offsetPx))
+                } else {
+                    canvasGridState.animateScrollToItem(0)
+                }
+            }
         }
     }
 
-    LaunchedEffect(searchResultsListGridState) {
-        snapshotFlow { searchResultsListGridState.isScrollInProgress }.collectLatest { isScrolling ->
-            if (isScrolling) keyboardController?.hide()
-        }
-    }
-
-    LaunchedEffect(canvasListGridState) {
+    LaunchedEffect(searchResultsGridState, searchResultsListState) {
         launch {
-            snapshotFlow { canvasListGridState.layoutInfo }.collectLatest { layoutInfo ->
+            snapshotFlow { searchResultsGridState.isScrollInProgress }.collectLatest { isScrolling ->
+                if (isScrolling) keyboardController?.hide()
+            }
+        }
+
+        launch {
+            snapshotFlow { searchResultsListState.isScrollInProgress }.collectLatest { isScrolling ->
+                if (isScrolling) keyboardController?.hide()
+            }
+        }
+    }
+
+    LaunchedEffect(canvasGridState, canvasListState) {
+        launch {
+            snapshotFlow { canvasGridState.layoutInfo }.collectLatest { layoutInfo ->
 
                 val first = layoutInfo.visibleItemsInfo.firstOrNull()
                 val last = layoutInfo.visibleItemsInfo.lastOrNull()
@@ -349,6 +367,26 @@ fun CanvasListScreen(
                     )
 
                     last != null && last.index == layoutInfo.totalItemsCount - 1 && last.offset.y + last.size.height <= layoutInfo.viewportEndOffset -> onAction(
+                        CanvasListAction.UpdateFabExpansion(false)
+                    )
+                }
+            }
+        }
+
+        launch {
+            snapshotFlow { canvasListState.layoutInfo }.collectLatest { layoutInfo ->
+
+                val first = layoutInfo.visibleItemsInfo.firstOrNull()
+                val last = layoutInfo.visibleItemsInfo.lastOrNull()
+
+                when {
+                    first?.index == 0 && first.offset == 0 -> onAction(
+                        CanvasListAction.UpdateFabExpansion(
+                            true
+                        )
+                    )
+
+                    last != null && last.index == layoutInfo.totalItemsCount - 1 && last.offset + last.size <= layoutInfo.viewportEndOffset -> onAction(
                         CanvasListAction.UpdateFabExpansion(false)
                     )
                 }
@@ -379,7 +417,7 @@ fun CanvasListScreen(
             ): Offset {
 
                 val isScrollable =
-                    canvasListGridState.canScrollForward || canvasListGridState.canScrollBackward
+                    canvasGridState.canScrollForward || canvasGridState.canScrollBackward
 
                 if (!isScrollable) {
                     accumulatedScroll = 0f
@@ -453,7 +491,9 @@ fun CanvasListScreen(
                         )
                     } else {
                         rememberCanvasMetricsBundle(
-                            layout = layout, scale = scale, typography = typography
+                            layout = layout,
+                            scale = scale,
+                            typography = typography
                         )
                     }
                 }, provide = { metrics, content ->
@@ -474,19 +514,49 @@ fun CanvasListScreen(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             style = MaterialTheme.typography.headlineMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = MaterialTheme.colorScheme.primary,
                             )
                         )
                     }
+
+                    val baseViewModeLayoutConfig: CanvasViewModeConfig =
+                        when (uiState.canvasViewMode) {
+                            CanvasViewMode.LIST -> {
+                                CanvasViewModeConfig.List(
+                                    state = canvasListState,
+                                )
+                            }
+
+                            CanvasViewMode.GRID -> {
+                                CanvasViewModeConfig.Grid(
+                                    state = canvasGridState,
+                                )
+                            }
+                        }
+
+                    val searchResultsViewModeLayoutConfig: CanvasViewModeConfig =
+                        when (uiState.canvasViewMode) {
+                            CanvasViewMode.LIST -> {
+                                CanvasViewModeConfig.List(
+                                    state = searchResultsListState,
+                                )
+                            }
+
+                            CanvasViewMode.GRID -> {
+                                CanvasViewModeConfig.Grid(
+                                    state = searchResultsGridState,
+                                )
+                            }
+                        }
 
                     CanvasListContent(
                         modifier = Modifier.fillMaxSize(),
                         uiState = uiState,
                         basePagingItems = basePagingItems,
                         searchPagingItems = searchPagingItems,
-                        canvasListGridState = canvasListGridState,
-                        searchResultsListGridState = searchResultsListGridState,
                         sortOptionsListState = sortOptionsListState,
+                        baseViewModeConfig = baseViewModeLayoutConfig,
+                        searchResultsViewModeConfig = searchResultsViewModeLayoutConfig,
                         pullRefreshState = pullRefreshState,
                         blurRadius = blurRadius,
                         searchPadding = searchPadding,
@@ -511,7 +581,8 @@ fun CanvasListScreen(
                     )
                 }, provide = { metrics, content ->
                     CompositionLocalProvider(
-                        LocalPreviewCanvasMetrics provides metrics, providedPaneWidth
+                        LocalPreviewCanvasMetrics provides metrics,
+                        providedPaneWidth
                     ) {
                         content()
                     }
@@ -659,7 +730,8 @@ fun AdaptiveSplitLayout(
             .width(rightWidthDp)
             .fillMaxHeight(), verticalAlignment = Alignment.CenterVertically) {
 
-            DragHandle(reveal = reveal,
+            DragHandle(
+                reveal = reveal,
                 totalWidthPx = maxWidthPx,
                 handleBoxWidth = handleBoxWidth,
                 stableAdaptiveState = stableAdaptiveState,
@@ -674,6 +746,519 @@ fun AdaptiveSplitLayout(
             Box(modifier = secondaryModifier) {
                 secondary(adaptiveModifier to local)
             }
+        }
+    }
+}
+
+@Composable
+private fun CanvasListContent(
+    modifier: Modifier = Modifier,
+    uiState: CanvasListUiState,
+    basePagingItems: LazyPagingItems<CanvasSummary>,
+    searchPagingItems: LazyPagingItems<CanvasSummary>,
+    baseViewModeConfig: CanvasViewModeConfig,
+    searchResultsViewModeConfig: CanvasViewModeConfig,
+    sortOptionsListState: LazyListState,
+    pullRefreshState: PullToRefreshState,
+    blurRadius: Dp,
+    searchPadding: Dp,
+    cornerRadiusForSearchBar: Dp,
+    showDeleteBar: Boolean,
+    showAppBar: Boolean,
+    showSortBar: Boolean,
+    isSearchMode: Boolean,
+    onAction: (CanvasListAction) -> Unit,
+    focusRequester: FocusRequester,
+    keyboardController: SoftwareKeyboardController?,
+    focusManager: FocusManager,
+    fabScrollConnection: NestedScrollConnection
+) {
+    val metrics = LocalCanvasMetrics.current
+    val visiblePaneWidth = LocalVisiblePaneWidth.current
+
+    val canvasListScreenMetrics = metrics.screen
+    val canvasGridMetrics = metrics.grid
+    val canvasItemMetrics = metrics.item
+    val canvasAppBarMetrics = metrics.appBar
+    val canvasFloatingButtonMetrics = metrics.floatingButton
+    val canvasSortBarMetrics = metrics.sortBar
+
+    val baseModeConfig: CanvasViewModeConfig = when (baseViewModeConfig) {
+        is CanvasViewModeConfig.Grid -> baseViewModeConfig.copy(
+            gridMetrics = canvasGridMetrics,
+            itemMetrics = canvasItemMetrics
+        )
+
+        is CanvasViewModeConfig.List -> baseViewModeConfig.copy(
+            itemMetrics = canvasItemMetrics,
+        )
+    }
+
+    val searchModeConfig: CanvasViewModeConfig = when (searchResultsViewModeConfig) {
+        is CanvasViewModeConfig.Grid -> searchResultsViewModeConfig.copy(
+            gridMetrics = canvasGridMetrics,
+            itemMetrics = canvasItemMetrics
+        )
+
+        is CanvasViewModeConfig.List -> searchResultsViewModeConfig.copy(
+            itemMetrics = canvasItemMetrics,
+        )
+    }
+
+    Column(
+        modifier = modifier
+    ) {
+        AnimatedVisibility(
+            visible = showDeleteBar,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            CanvasDeleteBar(
+                modifier = Modifier
+                    .padding(canvasListScreenMetrics.horizontalPadding)
+                    .fillMaxWidth(),
+                selectedCount = uiState.selectedIds.size,
+                onCloseDeleteBar = {
+                    onAction(CanvasListAction.CloseDeleteBar)
+                }, actions = {
+                    IconButton(modifier = Modifier.size(35.dp), onClick = {
+                        onAction(
+                            CanvasListAction.Bulk(
+                                BulkActionEvent.Request(
+                                    type = BulkRecycleActionType.RECYCLE_ALL,
+                                    targetIds = uiState.selectedIds
+                                )
+                            )
+                        )
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete canvas",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxSize(0.7f)
+                        )
+                    }
+                })
+        }
+
+        AnimatedVisibility(
+            visible = showSortBar,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            CanvasSortBar(
+                modifier = Modifier
+                    .padding(canvasListScreenMetrics.horizontalPadding)
+                    .fillMaxWidth(),
+                metrics = canvasSortBarMetrics,
+                listState = sortOptionsListState,
+                sortOptions = uiState.sortOptions,
+                selectedOption = uiState.sortOption,
+                onOptionSelected = { sortOption ->
+                    onAction(CanvasListAction.UpdateSortOption(sortOption))
+                },
+            )
+        }
+
+        AnimatedVisibility(
+            visible = showAppBar,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Box(
+                modifier = Modifier.width(visiblePaneWidth)
+            ) {
+                CanvasAppBar(
+                    modifier = Modifier.fillMaxWidth(),
+                    metrics = canvasAppBarMetrics,
+                    appName = "Scribble",
+                    actions = {
+                        IconButton(
+                            modifier = Modifier.size(35.dp),
+                            onClick = { onAction(CanvasListAction.RecycleBinClicked) },
+                            enabled = !uiState.isInitialLoading && !uiState.isRefreshing
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Recycling,
+                                contentDescription = "Recycle Bin",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+
+                        IconButton(
+                            modifier = Modifier.size(35.dp),
+                            onClick = { onAction(CanvasListAction.SortClicked) },
+                            enabled = !uiState.isInitialLoading && !uiState.isRefreshing
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SwapVert,
+                                contentDescription = "Sort",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        IconButton(
+                            modifier = Modifier.size(35.dp),
+                            onClick = { onAction(CanvasListAction.ToggleGridView) },
+                            enabled = !uiState.isInitialLoading && !uiState.isRefreshing
+                        ) {
+                            AnimatedContent(targetState = uiState.canvasViewMode) { viewMode ->
+                                when (viewMode) {
+                                    CanvasViewMode.LIST -> {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Default.ViewList,
+                                            contentDescription = "List View",
+                                            tint = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+
+                                    CanvasViewMode.GRID -> {
+                                        Icon(
+                                            imageVector = Icons.Default.GridView,
+                                            contentDescription = "Grid View",
+                                            tint = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+
+                            }
+                        }
+                    },
+                )
+            }
+        }
+
+        CanvasSearchBar(modifier = Modifier
+            .padding(
+                horizontal = searchPadding, vertical = 10.dp
+            )
+            .fillMaxWidth(),
+            focusRequester = focusRequester,
+            cornerRadius = cornerRadiusForSearchBar,
+            query = uiState.query,
+            isBlurred = isSearchMode,
+            enabled = !(uiState.isRefreshing || uiState.isInitialLoading),
+            onQueryChange = { query ->
+                onAction(CanvasListAction.QueryChange(query))
+            },
+            onFocusChange = { focus ->
+                if (focus) onAction(CanvasListAction.SearchMode)
+            },
+            onSearch = {
+                keyboardController?.hide()
+            },
+            onCloseSearchBar = {
+                keyboardController?.hide()
+                focusManager.clearFocus()
+                onAction(CanvasListAction.UpdateTopBarMode(TopBarMode.DEFAULT))
+                onAction(CanvasListAction.QueryChange(TextFieldValue("")))
+            })
+
+        Box(
+            modifier = Modifier.weight(1f)
+        ) {
+            PullToRefreshBox(
+                modifier = Modifier,
+                state = pullRefreshState,
+                isRefreshing = uiState.isRefreshing,
+                onRefresh = {
+                    onAction(CanvasListAction.RefreshData)
+                },
+            ) {
+                CanvasList(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(fabScrollConnection)
+                        .blur(blurRadius),
+                    isLoading = uiState.isInitialLoading,
+                    isBlurred = isSearchMode,
+                    items = basePagingItems,
+                    config = baseModeConfig,
+                    selectedIds = uiState.selectedIds,
+                    selectedPreviewId = uiState.selectedScribbleId,
+                    onClicked = { id ->
+                        onAction(
+                            CanvasListAction.CanvasItemInteractionAction(
+                                CanvasItemInteraction(
+                                    clickType = CanvasItemClickType.CLICK,
+                                    selectedId = id,
+                                )
+                            )
+                        )
+                    },
+                    onLongClicked = { id ->
+                        onAction(
+                            CanvasListAction.CanvasItemInteractionAction(
+                                CanvasItemInteraction(
+                                    clickType = CanvasItemClickType.LONG_CLICK, selectedId = id
+                                )
+                            )
+                        )
+                    },
+                )
+
+                ConfirmationDialog(state = uiState.dialogState, onConfirm = {
+                    onAction(
+                        CanvasListAction.Bulk(
+                            BulkActionEvent.Confirm
+                        )
+                    )
+                }, onDismiss = {
+                    onAction(
+                        CanvasListAction.Bulk(
+                            BulkActionEvent.Dismiss
+                        )
+                    )
+                })
+            }
+
+            androidx.compose.animation.AnimatedVisibility(
+                visible = blurRadius == 16.dp,
+                enter = fadeIn() + slideInVertically { it / 6 },
+                exit = fadeOut() + slideOutVertically { it / 6 },
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        detectTapGestures {
+                            keyboardController?.hide()
+                            focusManager.clearFocus()
+                            onAction(CanvasListAction.UpdateTopBarMode(TopBarMode.DEFAULT))
+                            onAction(CanvasListAction.QueryChange(TextFieldValue("")))
+                        }
+                    }) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.18f))
+                            .blur(10.dp)
+                            .border(
+                                width = 1.dp, color = Color.White.copy(alpha = 0.3f)
+                            )
+                    )
+
+                    if (uiState.showEmptyScribbles) {
+                        Text(
+                            text = "NO SCRIBBLES FOUND",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .imePadding()
+                                .align(Alignment.Center),
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        )
+                    }
+
+                    CanvasList(
+                        modifier = Modifier.fillMaxSize(),
+                        isLoading = false,
+                        isBlurred = false,
+                        items = searchPagingItems,
+                        config = searchModeConfig,
+                        selectedIds = emptySet(),
+                        onClicked = { id ->
+                            onAction(
+                                CanvasListAction.CanvasItemInteractionAction(
+                                    CanvasItemInteraction(
+                                        clickType = CanvasItemClickType.CLICK, selectedId = id
+                                    )
+                                )
+                            )
+                        },
+                        onLongClicked = {},
+                    )
+                }
+            }
+
+            androidx.compose.animation.AnimatedVisibility(
+                visible = showSortBar,
+            ) {
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        detectTapGestures {
+                            onAction(CanvasListAction.UpdateTopBarMode(TopBarMode.DEFAULT))
+                        }
+                    })
+            }
+
+            androidx.compose.animation.AnimatedVisibility(
+                visible = !showDeleteBar && !isSearchMode && !showSortBar && !uiState.isInitialLoading && !uiState.isRefreshing,
+                enter = fadeIn() + scaleIn(),
+                exit = fadeOut() + scaleOut(),
+                modifier = Modifier.align(Alignment.BottomEnd)
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Box(
+                        modifier = Modifier.width(visiblePaneWidth)
+                    ) {
+                        CanvasFloatingButton(modifier = Modifier
+                            .navigationBarsPadding()
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 16.dp, bottom = 16.dp),
+                            metrics = canvasFloatingButtonMetrics,
+                            isFabExpanded = uiState.isFabExpanded,
+                            onDrawClicked = {
+                                onAction(CanvasListAction.DrawCanvasClicked)
+                            })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@SuppressLint("FrequentlyChangingValue")
+@Composable
+private fun PreviewPane(
+    modifier: Modifier = Modifier,
+    pagingItems: LazyPagingItems<CanvasSummary>,
+    selectedIndex: Int,
+    onPageChanged: (Long) -> Unit
+) {
+
+    val metrics = LocalPreviewCanvasMetrics.current
+    val infoCardChange = metrics.infoCardStyleChange
+    val illustrationSize = metrics.illustrationSize
+
+    Box(
+        modifier = modifier
+    ) {
+        if (pagingItems.itemCount == 0) {
+
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(illustrationSize)
+                        .aspectRatio(1f)
+                        .background(
+                            color = Color.Transparent,
+                            shape = MaterialTheme.shapes.medium,
+                        )
+                        .innerShadow(
+                            shape = MaterialTheme.shapes.medium,
+                            shadow = Shadow(
+                                radius = 10.dp,
+                                spread = 4.dp,
+                                color = Color(0x40000000),
+                                offset = DpOffset(x = 3.dp, 4.dp)
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ImageNotSupported,
+                        contentDescription = "Illustration",
+                        modifier = Modifier.fillMaxSize(0.6f),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = "No Preview",
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                )
+            }
+
+            return
+        }
+
+        if (selectedIndex < 0) {
+
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(illustrationSize)
+                        .aspectRatio(1f)
+                        .background(
+                            color = Color.Transparent,
+                            shape = MaterialTheme.shapes.medium,
+                        )
+                        .innerShadow(
+                            shape = MaterialTheme.shapes.medium,
+                            shadow = Shadow(
+                                radius = 10.dp,
+                                spread = 4.dp,
+                                color = Color(0x40000000),
+                                offset = DpOffset(x = 3.dp, 4.dp)
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Image,
+                        contentDescription = "Illustration",
+                        modifier = Modifier.fillMaxSize(0.6f),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = "Select a Scribble",
+                    maxLines = 1,
+                    overflow = TextOverflow.StartEllipsis,
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                )
+            }
+            return
+        }
+
+        val pagerState = rememberPagerState(pageCount = { pagingItems.itemCount })
+
+        LaunchedEffect(pagerState) {
+            snapshotFlow { pagerState.currentPage }.distinctUntilChanged().collect {
+                val pagingItemId = pagingItems[it]?.id
+                if (pagingItemId != null) {
+                    onPageChanged(pagingItemId)
+                }
+            }
+        }
+
+        LaunchedEffect(selectedIndex) {
+            if (pagerState.currentPage != selectedIndex) {
+                pagerState.scrollToPage(selectedIndex)
+            }
+        }
+
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
+        ) { page ->
+            PreviewContent(
+                modifier = Modifier.fillMaxSize(),
+                content = pagingItems[page] ?: return@HorizontalPager,
+                pageOffset = pagerState.getOffsetDistanceInPages(page),
+                infoCardChange = infoCardChange
+            )
         }
     }
 }
@@ -760,9 +1345,6 @@ private fun DragHandle(
                 })
 
                 onPaneStateChange(finalState)
-
-                Log.d("TWO_PANE", "Local Reveal: $localReveal, PaneState: $finalState")
-
             })
         }) {
         Box(
@@ -774,411 +1356,6 @@ private fun DragHandle(
                     MaterialTheme.colorScheme.onSurfaceVariant, RoundedCornerShape(10.dp)
                 )
         )
-    }
-}
-
-@Composable
-private fun CanvasListContent(
-    modifier: Modifier = Modifier,
-    uiState: CanvasListUiState,
-    basePagingItems: LazyPagingItems<CanvasSummary>,
-    searchPagingItems: LazyPagingItems<CanvasSummary>,
-    canvasListGridState: LazyGridState,
-    searchResultsListGridState: LazyGridState,
-    sortOptionsListState: LazyListState,
-    pullRefreshState: PullToRefreshState,
-    blurRadius: Dp,
-    searchPadding: Dp,
-    cornerRadiusForSearchBar: Dp,
-    showDeleteBar: Boolean,
-    showAppBar: Boolean,
-    showSortBar: Boolean,
-    isSearchMode: Boolean,
-    onAction: (CanvasListAction) -> Unit,
-    focusRequester: FocusRequester,
-    keyboardController: SoftwareKeyboardController?,
-    focusManager: FocusManager,
-    fabScrollConnection: NestedScrollConnection
-) {
-
-    val metrics = LocalCanvasMetrics.current
-    val visiblePaneWidth = LocalVisiblePaneWidth.current
-
-    val canvasListScreenMetrics = metrics.screen
-    val canvasGridMetrics = metrics.grid
-    val canvasItemMetrics = metrics.item
-    val canvasAppBarMetrics = metrics.appBar
-    val canvasFloatingButtonMetrics = metrics.floatingButton
-    val canvasSortBarMetrics = metrics.sortBar
-
-    Column(
-        modifier = modifier
-    ) {
-        AnimatedVisibility(
-            visible = showDeleteBar,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
-        ) {
-            CanvasDeleteBar(modifier = Modifier
-                .padding(canvasListScreenMetrics.horizontalPadding)
-                .fillMaxWidth(), selectedCount = uiState.selectedIds.size, onCloseDeleteBar = {
-                onAction(CanvasListAction.CloseDeleteBar)
-            }, actions = {
-                IconButton(modifier = Modifier.size(35.dp), onClick = {
-                    onAction(
-                        CanvasListAction.Bulk(
-                            BulkActionEvent.Request(
-                                type = BulkRecycleActionType.RECYCLE_ALL,
-                                targetIds = uiState.selectedIds
-                            )
-                        )
-                    )
-                }) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete canvas",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxSize(0.7f)
-                    )
-                }
-            })
-        }
-
-        AnimatedVisibility(
-            visible = showSortBar,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
-        ) {
-            CanvasSortBar(
-                modifier = Modifier
-                    .padding(canvasListScreenMetrics.horizontalPadding)
-                    .fillMaxWidth(),
-                metrics = canvasSortBarMetrics,
-                listState = sortOptionsListState,
-                sortOptions = uiState.sortOptions,
-                selectedOption = uiState.sortOption,
-                onOptionSelected = { sortOption ->
-                    onAction(CanvasListAction.UpdateSortOption(sortOption))
-                },
-            )
-        }
-
-        AnimatedVisibility(
-            visible = showAppBar,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
-        ) {
-            Box(
-                modifier = Modifier.width(visiblePaneWidth)
-            ) {
-                CanvasAppBar(
-                    modifier = Modifier.fillMaxWidth(),
-                    metrics = canvasAppBarMetrics,
-                    appName = "Scribble",
-                    actions = {
-                        IconButton(
-                            modifier = Modifier.size(35.dp),
-                            onClick = { onAction(CanvasListAction.RecycleBinClicked) },
-                            enabled = !uiState.isInitialLoading && !uiState.isRefreshing
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Recycling,
-                                contentDescription = "Recycle Bin",
-                                tint = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-
-                        IconButton(
-                            modifier = Modifier.size(35.dp),
-                            onClick = { onAction(CanvasListAction.SortClicked) },
-                            enabled = !uiState.isInitialLoading && !uiState.isRefreshing
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.SwapVert,
-                                contentDescription = "Sort",
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-
-                        IconButton(
-                            modifier = Modifier.size(35.dp),
-                            onClick = { onAction(CanvasListAction.ToggleGridView) },
-                            enabled = !uiState.isInitialLoading && !uiState.isRefreshing
-                        ) {
-                            AnimatedContent(targetState = uiState.isGrid) { grid ->
-                                Icon(
-                                    imageVector = if (grid) Icons.Default.GridView
-                                    else Icons.AutoMirrored.Default.ViewList,
-                                    contentDescription = "Grid / List View",
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
-                    },
-                )
-            }
-        }
-
-        CanvasSearchBar(modifier = Modifier
-            .padding(
-                horizontal = searchPadding, vertical = 10.dp
-            )
-            .fillMaxWidth(),
-            focusRequester = focusRequester,
-            cornerRadius = cornerRadiusForSearchBar,
-            query = uiState.query,
-            isBlurred = isSearchMode,
-            enabled = !(uiState.isRefreshing || uiState.isInitialLoading),
-            onQueryChange = { query ->
-                onAction(CanvasListAction.QueryChange(query))
-            },
-            onFocusChange = { focus ->
-                if (focus) onAction(CanvasListAction.SearchMode)
-            },
-            onSearch = {
-                keyboardController?.hide()
-            },
-            onCloseSearchBar = {
-                keyboardController?.hide()
-                focusManager.clearFocus()
-                onAction(CanvasListAction.UpdateTopBarMode(TopBarMode.DEFAULT))
-                onAction(CanvasListAction.QueryChange(TextFieldValue("")))
-            })
-
-        Box(
-            modifier = Modifier.weight(1f)
-        ) {
-            PullToRefreshBox(
-                modifier = Modifier,
-                state = pullRefreshState,
-                isRefreshing = uiState.isRefreshing,
-                onRefresh = {
-                    onAction(CanvasListAction.RefreshData)
-                },
-            ) {
-
-                CanvasList(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .nestedScroll(fabScrollConnection)
-                        .blur(blurRadius),
-                    isLoading = uiState.isInitialLoading,
-                    isBlurred = isSearchMode,
-                    items = basePagingItems,
-                    gridState = canvasListGridState,
-                    canvasGridMetrics = canvasGridMetrics,
-                    itemMetrics = canvasItemMetrics,
-                    selectedIds = uiState.selectedIds,
-                    selectedPreviewId = uiState.selectedScribbleId,
-                    onClicked = { id ->
-                        onAction(
-                            CanvasListAction.CanvasItemInteractionAction(
-                                CanvasItemInteraction(
-                                    clickType = CanvasItemClickType.CLICK,
-                                    selectedId = id,
-                                )
-                            )
-                        )
-                    },
-                    onLongClicked = { id ->
-                        onAction(
-                            CanvasListAction.CanvasItemInteractionAction(
-                                CanvasItemInteraction(
-                                    clickType = CanvasItemClickType.LONG_CLICK, selectedId = id
-                                )
-                            )
-                        )
-                    },
-                )
-
-                ConfirmationDialog(state = uiState.dialogState, onConfirm = {
-                    onAction(
-                        CanvasListAction.Bulk(
-                            BulkActionEvent.Confirm
-                        )
-                    )
-                }, onDismiss = {
-                    onAction(
-                        CanvasListAction.Bulk(
-                            BulkActionEvent.Dismiss
-                        )
-                    )
-                })
-            }
-
-            androidx.compose.animation.AnimatedVisibility(visible = blurRadius == 16.dp,
-                enter = fadeIn() + slideInVertically { it / 6 },
-                exit = fadeOut() + slideOutVertically { it / 6 },
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Box(modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectTapGestures {
-                            keyboardController?.hide()
-                            focusManager.clearFocus()
-                            onAction(CanvasListAction.UpdateTopBarMode(TopBarMode.DEFAULT))
-                            onAction(CanvasListAction.QueryChange(TextFieldValue("")))
-                        }
-                    }) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.18f))
-                            .blur(10.dp)
-                            .border(
-                                width = 1.dp, color = Color.White.copy(alpha = 0.3f)
-                            )
-                    )
-
-                    if (uiState.showEmptyScribbles) {
-                        Text(
-                            text = "NO SCRIBBLES FOUND",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .imePadding()
-                                .align(Alignment.Center),
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        )
-                    }
-
-                    CanvasList(
-                        modifier = Modifier.fillMaxSize(),
-                        isLoading = false,
-                        isBlurred = false,
-                        items = searchPagingItems,
-                        gridState = searchResultsListGridState,
-                        canvasGridMetrics = canvasGridMetrics,
-                        itemMetrics = canvasItemMetrics,
-                        selectedIds = emptySet(),
-                        onClicked = { id ->
-                            onAction(
-                                CanvasListAction.CanvasItemInteractionAction(
-                                    CanvasItemInteraction(
-                                        clickType = CanvasItemClickType.CLICK, selectedId = id
-                                    )
-                                )
-                            )
-                        },
-                        onLongClicked = {},
-                    )
-                }
-            }
-
-            androidx.compose.animation.AnimatedVisibility(
-                visible = showSortBar,
-            ) {
-                Box(modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectTapGestures {
-                            onAction(CanvasListAction.UpdateTopBarMode(TopBarMode.DEFAULT))
-                        }
-                    })
-            }
-
-            androidx.compose.animation.AnimatedVisibility(
-                visible = !showDeleteBar && !isSearchMode && !showSortBar && !uiState.isInitialLoading && !uiState.isRefreshing,
-                enter = fadeIn() + scaleIn(),
-                exit = fadeOut() + scaleOut(),
-                modifier = Modifier.align(Alignment.BottomEnd)
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(
-                        modifier = Modifier.width(visiblePaneWidth)
-                    ) {
-                        CanvasFloatingButton(modifier = Modifier
-                            .navigationBarsPadding()
-                            .align(Alignment.BottomEnd)
-                            .padding(end = 16.dp, bottom = 16.dp),
-                            metrics = canvasFloatingButtonMetrics,
-                            isFabExpanded = uiState.isFabExpanded,
-                            onDrawClicked = {
-                                onAction(CanvasListAction.DrawCanvasClicked)
-                            })
-                    }
-                }
-            }
-        }
-    }
-}
-
-@SuppressLint("FrequentlyChangingValue")
-@Composable
-private fun PreviewPane(
-    modifier: Modifier = Modifier,
-    pagingItems: LazyPagingItems<CanvasSummary>,
-    selectedIndex: Int,
-    onPageChanged: (Long) -> Unit
-) {
-
-    val metrics = LocalPreviewCanvasMetrics.current
-    val infoCardChange = metrics.infoCardStyleChange
-
-    Box(
-        modifier = modifier
-    ) {
-        if (pagingItems.itemCount == 0) {
-            Text(
-                text = "Nothing To Show",
-                maxLines = 1,
-                overflow = TextOverflow.StartEllipsis,
-                modifier = Modifier.align(Alignment.Center),
-                style = MaterialTheme.typography.titleLarge.copy(
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            )
-            return
-        }
-
-        if (selectedIndex < 0) {
-            Text(
-                text = "Select a Scribble",
-                maxLines = 1,
-                overflow = TextOverflow.StartEllipsis,
-                modifier = Modifier.align(Alignment.Center),
-                style = MaterialTheme.typography.titleLarge.copy(
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            )
-            return
-        }
-
-        val pagerState = rememberPagerState(pageCount = { pagingItems.itemCount })
-
-        LaunchedEffect(pagerState) {
-            snapshotFlow { pagerState.currentPage }.distinctUntilChanged().collect {
-                    val pagingItemId = pagingItems[it]?.id
-                    if (pagingItemId != null) {
-                        onPageChanged(pagingItemId)
-                    }
-                }
-        }
-
-        LaunchedEffect(selectedIndex) {
-            if (pagerState.currentPage != selectedIndex) {
-                pagerState.scrollToPage(selectedIndex)
-            }
-        }
-
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize(),
-        ) { page ->
-            PreviewContent(
-                modifier = Modifier.fillMaxSize(),
-                content = pagingItems[page] ?: return@HorizontalPager,
-                pageOffset = pagerState.getOffsetDistanceInPages(page),
-                infoCardChange = infoCardChange
-            )
-        }
     }
 }
 

@@ -5,6 +5,7 @@ import com.scribble.it.feature_canvas.presentation.canvasdraw.state.PageFormat
 
 data class CanvasDrawing(
     val id: Long? = null,
+    val autoTitleIndex: Int? = null,
     val title: String = "",
     val canvasStrokes: List<CanvasStroke> = emptyList(),
     val pageFormat: PageFormat = PageFormat.A4,

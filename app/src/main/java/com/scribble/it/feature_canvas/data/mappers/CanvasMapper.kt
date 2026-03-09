@@ -1,6 +1,5 @@
 package com.scribble.it.feature_canvas.data.mappers
 
-import android.util.Log
 import com.scribble.it.feature_canvas.data.local.db.entities.CanvasEntity
 import com.scribble.it.feature_canvas.data.local.db.model.CanvasStrokeEntity
 import com.scribble.it.feature_canvas.data.local.db.model.CanvasSummaryEntity
@@ -12,6 +11,7 @@ import com.scribble.it.feature_canvas.domain.model.stroke.PEN
 fun CanvasDrawing.toCanvasEntity(): CanvasEntity {
     return CanvasEntity(
         id = this.id,
+        autoTitleIndex = this.autoTitleIndex,
         title = this.title,
         canvasStrokesDto = this.canvasStrokes.map { it.toCanvasStrokeDto() },
         pageFormat = this.pageFormat,
@@ -37,6 +37,7 @@ fun CanvasSummaryEntity.toCanvasSummary(): CanvasSummary {
 fun CanvasEntity.toCanvasDrawing(): CanvasDrawing {
     return CanvasDrawing(
         id = this.id,
+        autoTitleIndex = this.autoTitleIndex,
         title = this.title,
         canvasStrokes = this.canvasStrokesDto.map { it.toCanvasStroke() },
         pageFormat = this.pageFormat,

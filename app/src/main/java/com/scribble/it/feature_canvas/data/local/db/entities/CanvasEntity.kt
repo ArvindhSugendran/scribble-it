@@ -10,6 +10,7 @@ import com.scribble.it.feature_canvas.presentation.canvasdraw.state.PageFormat
 data class CanvasEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long?,
+    val autoTitleIndex: Int? = null,
     val title: String,
     @ColumnInfo(name = "canvasStrokes")
     val canvasStrokesDto: List<CanvasStrokeEntity>,

@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Deselect
@@ -79,6 +80,8 @@ import com.scribble.it.feature_canvas.presentation.common.components.CanvasAppBa
 import com.scribble.it.feature_canvas.presentation.common.components.CanvasDeleteBar
 import com.scribble.it.feature_canvas.presentation.common.components.CanvasList
 import com.scribble.it.feature_canvas.presentation.common.components.ConfirmationDialog
+import com.scribble.it.feature_canvas.presentation.common.state.CanvasViewMode
+import com.scribble.it.feature_canvas.presentation.common.state.CanvasViewModeConfig
 import com.scribble.it.feature_canvas.presentation.common.ui.adaptive.metrics.retrieveCanvasAppBarMetrics
 import com.scribble.it.feature_canvas.presentation.common.ui.adaptive.metrics.retrieveCanvasGridMetrics
 import com.scribble.it.feature_canvas.presentation.common.ui.adaptive.metrics.retrieveCanvasItemMetrics
@@ -109,7 +112,9 @@ fun CanvasRecycleScreen(
         getLayoutConfiguration(windowSizeClass, configuration)
     }
 
+    val canvasRecycleListState = rememberLazyListState()
     val canvasRecycleGridState = rememberLazyGridState()
+
     val pullRefreshState = rememberPullToRefreshState()
 
     val recyclePagingItems = recyclePagingFlow.collectAsLazyPagingItems()
@@ -172,6 +177,24 @@ fun CanvasRecycleScreen(
                 scale = scale, layout = layoutConfig, typography = typography
             )
         }
+
+        val baseViewModeLayoutConfig: CanvasViewModeConfig =
+            when (uiState.canvasViewMode) {
+                CanvasViewMode.LIST -> {
+                    CanvasViewModeConfig.List(
+                        state = canvasRecycleListState,
+                        itemMetrics = canvasItemMetrics
+                    )
+                }
+
+                CanvasViewMode.GRID -> {
+                    CanvasViewModeConfig.Grid(
+                        state = canvasRecycleGridState,
+                        itemMetrics = canvasItemMetrics,
+                        gridMetrics = canvasGridMetrics
+                    )
+                }
+            }
 
         Column {
             AnimatedVisibility(
@@ -359,12 +382,10 @@ fun CanvasRecycleScreen(
                     CanvasList(
                         modifier = Modifier
                             .fillMaxSize(),
+                        config = baseViewModeLayoutConfig,
                         isLoading = uiState.isInitialLoading,
                         isBlurred = false,
                         items = recyclePagingItems,
-                        gridState = canvasRecycleGridState,
-                        canvasGridMetrics = canvasGridMetrics,
-                        itemMetrics = canvasItemMetrics,
                         selectedIds = uiState.selectedIds,
                         onClicked = { id ->
                             onAction(
