@@ -13,6 +13,7 @@ import com.scribble.it.feature_canvas.data.mappers.toCanvasEntity
 import com.scribble.it.feature_canvas.data.mappers.toCanvasSummary
 import com.scribble.it.feature_canvas.domain.model.canvas.CanvasDrawing
 import com.scribble.it.feature_canvas.domain.model.canvasSummary.CanvasSummary
+import com.scribble.it.feature_canvas.domain.model.operation.SortOption
 import com.scribble.it.feature_canvas.domain.repository.CanvasRepository
 import com.scribble.it.feature_canvas.presentation.common.state.CanvasViewMode
 import kotlinx.coroutines.Dispatchers
@@ -94,16 +95,37 @@ class CanvasRepositoryImpl @Inject constructor(
         scribbleDao.restoreCanvases(canvasIds = canvasIds)
     }
 
-    override suspend fun setCanvasViewMode(mode: CanvasViewMode) {
-        scribbleDataStorePreferences.setCanvasViewMode(mode.name)
+    override suspend fun setScribbleViewMode(mode: CanvasViewMode) {
+        scribbleDataStorePreferences.setScribbleViewMode(mode.name)
     }
 
-    override fun getCanvasViewMode(): Flow<CanvasViewMode> {
+    override fun getScribbleViewMode(): Flow<CanvasViewMode> {
         return scribbleDataStorePreferences
-            .getCanvasViewMode()
+            .getScribbleViewMode()
             .map { mode ->
                 CanvasViewMode.valueOf(mode)
             }
+    }
+
+    override suspend fun setScribbleSortMode(mode: SortOption) {
+        scribbleDataStorePreferences.setScribbleSortMode(mode.name)
+    }
+
+    override fun getScribbleSortMode(): Flow<SortOption> {
+        return scribbleDataStorePreferences
+            .getScribbleSortMode()
+            .map { mode ->
+                SortOption.valueOf(mode)
+            }
+    }
+
+    override suspend fun setOnBoardingCompleted() {
+        scribbleDataStorePreferences.setOnBoardingCompleted()
+    }
+
+    override fun getOnBoardingStatus(): Flow<Boolean> {
+        return scribbleDataStorePreferences
+            .getOnBoardingStatus()
     }
 
 }

@@ -10,7 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import com.scribble.it.ui.theme.Graphite90
+import com.scribble.it.ui.theme.AmberGraphite90
 
 @Composable
 fun PrimaryButton(
@@ -25,7 +25,7 @@ fun PrimaryButton(
         modifier = modifier,
         shape = MaterialTheme.shapes.small,
         colors = ButtonDefaults.buttonColors(
-            containerColor = Graphite90.copy(alpha = 0.3f),
+            containerColor = AmberGraphite90.copy(alpha = 0.3f),
             contentColor = Color.White
         ),
         contentPadding = contentPaddingValues

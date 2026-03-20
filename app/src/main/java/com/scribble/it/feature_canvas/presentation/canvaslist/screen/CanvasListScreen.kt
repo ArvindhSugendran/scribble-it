@@ -4,8 +4,10 @@ import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -50,7 +52,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Image
@@ -75,18 +77,22 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.innerShadow
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -127,8 +133,13 @@ import com.scribble.it.feature_canvas.presentation.canvaslist.components.canvasP
 import com.scribble.it.feature_canvas.presentation.canvaslist.components.previewPane.PreviewContent
 import com.scribble.it.feature_canvas.presentation.canvaslist.event.CanvasListEvent
 import com.scribble.it.feature_canvas.presentation.canvaslist.state.CanvasListUiState
-import com.scribble.it.feature_canvas.presentation.canvaslist.state.PaneState
+import com.scribble.it.feature_canvas.presentation.canvaslist.state.DialogUiState
+import com.scribble.it.feature_canvas.presentation.canvaslist.state.FabUiState
+import com.scribble.it.feature_canvas.presentation.canvaslist.state.ListUiState
+import com.scribble.it.feature_canvas.presentation.canvaslist.state.PaneMode
+import com.scribble.it.feature_canvas.presentation.canvaslist.state.PaneUiState
 import com.scribble.it.feature_canvas.presentation.canvaslist.state.StableAdaptiveState
+import com.scribble.it.feature_canvas.presentation.canvaslist.state.TopBarUiState
 import com.scribble.it.feature_canvas.presentation.canvaslist.ui.adaptive.environment.LocalCanvasMetrics
 import com.scribble.it.feature_canvas.presentation.canvaslist.ui.adaptive.environment.LocalPreviewCanvasMetrics
 import com.scribble.it.feature_canvas.presentation.canvaslist.ui.adaptive.environment.LocalVisiblePaneWidth
@@ -206,10 +217,16 @@ fun CanvasListScreen(
     var searchCycleStarted by remember { mutableStateOf(false) }
     var isTwoPane by remember { mutableStateOf(false) }
 
-    val showDeleteBar = uiState.topBarMode == TopBarMode.DELETE
-    val showAppBar = uiState.topBarMode == TopBarMode.DEFAULT
-    val showSortBar = uiState.topBarMode == TopBarMode.SORT
-    val isSearchMode = uiState.topBarMode == TopBarMode.SEARCH
+    val paneState = uiState.pane
+    val topBarState = uiState.topBar
+    val listState = uiState.list
+    val fabState = uiState.fab
+    val dialogState = uiState.dialog
+
+    val showDeleteBar = topBarState.topBarMode == TopBarMode.DELETE
+    val showAppBar = topBarState.topBarMode == TopBarMode.DEFAULT
+    val showSortBar = topBarState.topBarMode == TopBarMode.SORT
+    val isSearchMode = topBarState.topBarMode == TopBarMode.SEARCH
 
     val isWideLayout = layoutConfig.width >= WidthClass.MEDIUM
 
@@ -233,23 +250,47 @@ fun CanvasListScreen(
     }
 
     val selectedIndex = remember(
-        uiState.selectedScribbleId, basePagingItems.itemSnapshotList
+        paneState.selectedScribbleId, basePagingItems.itemSnapshotList
     ) {
-        basePagingItems.itemSnapshotList.items.indexOfFirst { it.id == uiState.selectedScribbleId }
+        basePagingItems.itemSnapshotList.items.indexOfFirst { it.id == paneState.selectedScribbleId }
+    }
+
+    val textReveal = remember { androidx.compose.animation.core.Animatable(0f) }
+    var hasAnimated by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(listState.isInitialLoading) {
+        if (listState.isInitialLoading) {
+            hasAnimated = false
+            textReveal.snapTo(0f)
+        } else {
+            if (hasAnimated) {
+                textReveal.snapTo(1f)
+            }
+            if (!hasAnimated) {
+                textReveal.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(
+                        durationMillis = 1000,
+                        easing = LinearOutSlowInEasing
+                    )
+                )
+                hasAnimated = true
+            }
+        }
     }
 
     LaunchedEffect(isTwoPane) {
         if (!isTwoPane) {
             onAction(
                 CanvasListAction.OnPaneChanged(
-                    PaneState.SinglePane
+                    PaneMode.SinglePane
                 )
             )
         } else {
-            if (uiState.paneState is PaneState.SinglePane) {
+            if (paneState.paneMode is PaneMode.SinglePane) {
                 onAction(
                     CanvasListAction.OnPaneChanged(
-                        PaneState.TwoPane.Split
+                        PaneMode.TwoPane.Split
                     )
                 )
             }
@@ -265,17 +306,25 @@ fun CanvasListScreen(
     LaunchedEffect(isSearchMode) {
         if (isSearchMode) {
             focusRequester.requestFocus()
-            onAction(CanvasListAction.QueryChange(uiState.query.copy(selection = TextRange(uiState.query.text.length))))
+            onAction(
+                CanvasListAction.QueryChange(
+                    topBarState.query.copy(
+                        selection = TextRange(
+                            topBarState.query.text.length
+                        )
+                    )
+                )
+            )
         }
     }
 
     LaunchedEffect(showSortBar) {
         if (showSortBar) {
-            sortOptionsListState.scrollToItem(uiState.sortOptions.indexOf(uiState.sortOption))
+            sortOptionsListState.scrollToItem(topBarState.sortOptions.indexOf(topBarState.sortOption))
         }
     }
 
-    LaunchedEffect(uiState.query.text) {
+    LaunchedEffect(topBarState.query.text) {
         snapshotFlow { searchPagingItems.loadState.refresh }.map { it::class }
             .distinctUntilChanged().collect { stateClass ->
                 when (stateClass) {
@@ -286,7 +335,7 @@ fun CanvasListScreen(
                     LoadState.NotLoading::class -> {
                         if (searchCycleStarted) {
                             val count = searchPagingItems.itemCount
-                            val queryNotBlank = uiState.query.text.isNotBlank()
+                            val queryNotBlank = topBarState.query.text.isNotBlank()
                             val showEmpty = count == 0 && queryNotBlank
 
                             onAction(CanvasListAction.UpdateShowSearchEmpty(showEmptyResultsText = showEmpty))
@@ -307,8 +356,8 @@ fun CanvasListScreen(
     }
 
     LaunchedEffect(basePagingItems.loadState.refresh) {
-        if (basePagingItems.loadState.refresh is LoadState.NotLoading && uiState.shouldScrollToTop) {
-            when(uiState.canvasViewMode) {
+        if (basePagingItems.loadState.refresh is LoadState.NotLoading && listState.shouldScrollToTop) {
+            when (listState.canvasViewMode) {
                 CanvasViewMode.LIST -> canvasListState.animateScrollToItem(0)
                 CanvasViewMode.GRID -> canvasGridState.animateScrollToItem(0, 0)
             }
@@ -316,15 +365,20 @@ fun CanvasListScreen(
         }
     }
 
-    LaunchedEffect(selectedIndex, uiState.canvasViewMode) {
-        val offsetPx = with(density) { 50.dp.roundToPx() }
+    var previousMode by rememberSaveable { mutableStateOf<CanvasViewMode?>(null) }
 
-        when (uiState.canvasViewMode) {
+    LaunchedEffect(selectedIndex, listState.canvasViewMode) {
+        previousMode = listState.canvasViewMode
+
+        val offsetPx = with(density) { 50.dp.roundToPx() }
+        when (listState.canvasViewMode) {
             CanvasViewMode.LIST -> {
                 if (selectedIndex != -1) {
                     canvasListState.animateScrollToItem(selectedIndex)
                 } else {
-                    canvasListState.animateScrollToItem(0)
+                    if (previousMode != listState.canvasViewMode) {
+                        canvasListState.animateScrollToItem(0)
+                    }
                 }
             }
 
@@ -332,7 +386,9 @@ fun CanvasListScreen(
                 if (selectedIndex != -1) {
                     canvasGridState.animateScrollToItem(selectedIndex, scrollOffset = (-offsetPx))
                 } else {
-                    canvasGridState.animateScrollToItem(0)
+                    if (previousMode != listState.canvasViewMode) {
+                        canvasGridState.animateScrollToItem(0)
+                    }
                 }
             }
         }
@@ -392,7 +448,6 @@ fun CanvasListScreen(
                 }
             }
         }
-
     }
 
     LaunchedEffect(eventsFlow, lifecycleOwner) {
@@ -468,11 +523,11 @@ fun CanvasListScreen(
 
         AdaptiveSplitLayout(
             stableAdaptiveState = stableAdaptiveState,
-            reveal = uiState.paneReveal,
+            reveal = paneState.paneReveal,
             onRevealChange = { onAction(CanvasListAction.OnRevealChanged(it)) },
             isTwoPane = isTwoPane,
             onPaneStateChange = { onAction(CanvasListAction.OnPaneChanged(it)) },
-            primary = { (modifier, providedPaneWidth) ->
+            primaryPane = { (modifier, providedPaneWidth) ->
                 AdaptiveMetricsPane(modifier = modifier, buildMetrics = { scale, layout ->
                     val metricsWidth = stableAdaptiveState.current()
                     if (metricsWidth != null) {
@@ -503,13 +558,23 @@ fun CanvasListScreen(
                         content()
                     }
                 }) {
-                    if (baseEmpty && !uiState.isInitialLoading && !uiState.isRefreshing) {
+
+                    if (baseEmpty && !listState.isInitialLoading && !listState.isRefreshing) {
                         Text(
                             text = "Create your first Scribble ✏️",
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .imePadding()
-                                .align(Alignment.Center),
+                                .align(Alignment.Center)
+                                .drawWithContent {
+                                    val revealWidth = size.width * textReveal.value
+                                    clipRect(
+                                        left = 0f,
+                                        right = revealWidth
+                                    ) {
+                                        this@drawWithContent.drawContent()
+                                    }
+                                },
                             textAlign = TextAlign.Center,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -520,7 +585,7 @@ fun CanvasListScreen(
                     }
 
                     val baseViewModeLayoutConfig: CanvasViewModeConfig =
-                        when (uiState.canvasViewMode) {
+                        when (listState.canvasViewMode) {
                             CanvasViewMode.LIST -> {
                                 CanvasViewModeConfig.List(
                                     state = canvasListState,
@@ -535,7 +600,7 @@ fun CanvasListScreen(
                         }
 
                     val searchResultsViewModeLayoutConfig: CanvasViewModeConfig =
-                        when (uiState.canvasViewMode) {
+                        when (listState.canvasViewMode) {
                             CanvasViewMode.LIST -> {
                                 CanvasViewModeConfig.List(
                                     state = searchResultsListState,
@@ -551,7 +616,11 @@ fun CanvasListScreen(
 
                     CanvasListContent(
                         modifier = Modifier.fillMaxSize(),
-                        uiState = uiState,
+                        paneState = paneState,
+                        topBarState = topBarState,
+                        listState = listState,
+                        fabState = fabState,
+                        dialogState = dialogState,
                         basePagingItems = basePagingItems,
                         searchPagingItems = searchPagingItems,
                         sortOptionsListState = sortOptionsListState,
@@ -573,7 +642,7 @@ fun CanvasListScreen(
                     )
                 }
             },
-            secondary = { (modifier, providedPaneWidth) ->
+            secondaryPane = { (modifier, providedPaneWidth) ->
                 AdaptiveMetricsPane(modifier = modifier, buildMetrics = { scale, layout ->
                     rememberPreviewScreenMetrics(
                         layout = layout,
@@ -594,6 +663,9 @@ fun CanvasListScreen(
                         onPageChanged = { id ->
                             onAction(CanvasListAction.OnPageChanged(id))
                         },
+                        onAction = { action ->
+                            onAction(action)
+                        }
                     )
                 }
             },
@@ -601,9 +673,9 @@ fun CanvasListScreen(
     }
 
     BackHandler(
-        enabled = uiState.topBarMode != TopBarMode.DEFAULT || uiState.paneState != PaneState.TwoPane.Split
+        enabled = topBarState.topBarMode != TopBarMode.DEFAULT || (paneState.paneMode != PaneMode.TwoPane.Split && paneState.paneMode != PaneMode.SinglePane)
     ) {
-        when (uiState.topBarMode) {
+        when (topBarState.topBarMode) {
             TopBarMode.DELETE -> {
                 onAction(CanvasListAction.CloseDeleteBar)
                 return@BackHandler
@@ -625,13 +697,13 @@ fun CanvasListScreen(
             else -> {}
         }
 
-        if (uiState.paneState != PaneState.TwoPane.Split && uiState.paneState != PaneState.SinglePane) {
+        if (paneState.paneMode != PaneMode.TwoPane.Split && paneState.paneMode != PaneMode.SinglePane) {
             stableAdaptiveState.commit(
                 0.5f, null
             )
             onAction(
                 CanvasListAction.OnPaneChanged(
-                    PaneState.TwoPane.Split
+                    PaneMode.TwoPane.Split
                 )
             )
             return@BackHandler
@@ -645,10 +717,10 @@ fun AdaptiveSplitLayout(
     reveal: Float,
     onRevealChange: (Float) -> Unit,
     isTwoPane: Boolean,
-    onPaneStateChange: (PaneState) -> Unit,
+    onPaneStateChange: (PaneMode) -> Unit,
     modifier: Modifier = Modifier,
-    primary: @Composable (Pair<Modifier, ProvidedValue<Dp>>) -> Unit,
-    secondary: @Composable (Pair<Modifier, ProvidedValue<Dp>>) -> Unit
+    primaryPane: @Composable (Pair<Modifier, ProvidedValue<Dp>>) -> Unit,
+    secondaryPane: @Composable (Pair<Modifier, ProvidedValue<Dp>>) -> Unit
 ) {
     val density = LocalDensity.current
     var adaptiveModifier: Modifier
@@ -664,7 +736,7 @@ fun AdaptiveSplitLayout(
             adaptiveModifier = Modifier.fillMaxSize()
             local = LocalVisiblePaneWidth provides maxWidth
 
-            primary(adaptiveModifier to local)
+            primaryPane(adaptiveModifier to local)
             return@BoxWithConstraints
         }
 
@@ -718,7 +790,7 @@ fun AdaptiveSplitLayout(
 
         // PRIMARY PANE
         Box(modifier = primaryModifier) {
-            primary(adaptiveModifier to local)
+            primaryPane(adaptiveModifier to local)
         }
 
         // HANDLE PANE
@@ -744,7 +816,7 @@ fun AdaptiveSplitLayout(
 
             // SECONDARY
             Box(modifier = secondaryModifier) {
-                secondary(adaptiveModifier to local)
+                secondaryPane(adaptiveModifier to local)
             }
         }
     }
@@ -753,7 +825,11 @@ fun AdaptiveSplitLayout(
 @Composable
 private fun CanvasListContent(
     modifier: Modifier = Modifier,
-    uiState: CanvasListUiState,
+    paneState: PaneUiState,
+    topBarState: TopBarUiState,
+    listState: ListUiState,
+    fabState: FabUiState,
+    dialogState: DialogUiState,
     basePagingItems: LazyPagingItems<CanvasSummary>,
     searchPagingItems: LazyPagingItems<CanvasSummary>,
     baseViewModeConfig: CanvasViewModeConfig,
@@ -780,8 +856,8 @@ private fun CanvasListContent(
     val canvasGridMetrics = metrics.grid
     val canvasItemMetrics = metrics.item
     val canvasAppBarMetrics = metrics.appBar
-    val canvasFloatingButtonMetrics = metrics.floatingButton
     val canvasSortBarMetrics = metrics.sortBar
+    val canvasFloatingButtonMetrics = metrics.floatingButton
 
     val baseModeConfig: CanvasViewModeConfig = when (baseViewModeConfig) {
         is CanvasViewModeConfig.Grid -> baseViewModeConfig.copy(
@@ -808,6 +884,7 @@ private fun CanvasListContent(
     Column(
         modifier = modifier
     ) {
+
         AnimatedVisibility(
             visible = showDeleteBar,
             enter = fadeIn() + expandVertically(),
@@ -817,7 +894,7 @@ private fun CanvasListContent(
                 modifier = Modifier
                     .padding(canvasListScreenMetrics.horizontalPadding)
                     .fillMaxWidth(),
-                selectedCount = uiState.selectedIds.size,
+                selectedCount = listState.selectedIds.size,
                 onCloseDeleteBar = {
                     onAction(CanvasListAction.CloseDeleteBar)
                 }, actions = {
@@ -826,7 +903,7 @@ private fun CanvasListContent(
                             CanvasListAction.Bulk(
                                 BulkActionEvent.Request(
                                     type = BulkRecycleActionType.RECYCLE_ALL,
-                                    targetIds = uiState.selectedIds
+                                    targetIds = listState.selectedIds
                                 )
                             )
                         )
@@ -852,8 +929,8 @@ private fun CanvasListContent(
                     .fillMaxWidth(),
                 metrics = canvasSortBarMetrics,
                 listState = sortOptionsListState,
-                sortOptions = uiState.sortOptions,
-                selectedOption = uiState.sortOption,
+                sortOptions = topBarState.sortOptions,
+                selectedOption = topBarState.sortOption,
                 onOptionSelected = { sortOption ->
                     onAction(CanvasListAction.UpdateSortOption(sortOption))
                 },
@@ -876,7 +953,7 @@ private fun CanvasListContent(
                         IconButton(
                             modifier = Modifier.size(35.dp),
                             onClick = { onAction(CanvasListAction.RecycleBinClicked) },
-                            enabled = !uiState.isInitialLoading && !uiState.isRefreshing
+                            enabled = !listState.isInitialLoading && !listState.isRefreshing
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Recycling,
@@ -888,7 +965,7 @@ private fun CanvasListContent(
                         IconButton(
                             modifier = Modifier.size(35.dp),
                             onClick = { onAction(CanvasListAction.SortClicked) },
-                            enabled = !uiState.isInitialLoading && !uiState.isRefreshing
+                            enabled = !listState.isInitialLoading && !listState.isRefreshing
                         ) {
                             Icon(
                                 imageVector = Icons.Default.SwapVert,
@@ -900,13 +977,13 @@ private fun CanvasListContent(
                         IconButton(
                             modifier = Modifier.size(35.dp),
                             onClick = { onAction(CanvasListAction.ToggleGridView) },
-                            enabled = !uiState.isInitialLoading && !uiState.isRefreshing
+                            enabled = !listState.isInitialLoading && !listState.isRefreshing
                         ) {
-                            AnimatedContent(targetState = uiState.canvasViewMode) { viewMode ->
+                            AnimatedContent(targetState = listState.canvasViewMode) { viewMode ->
                                 when (viewMode) {
                                     CanvasViewMode.LIST -> {
                                         Icon(
-                                            imageVector = Icons.AutoMirrored.Default.ViewList,
+                                            imageVector = Icons.AutoMirrored.Default.ListAlt,
                                             contentDescription = "List View",
                                             tint = MaterialTheme.colorScheme.onSurface
                                         )
@@ -928,16 +1005,17 @@ private fun CanvasListContent(
             }
         }
 
-        CanvasSearchBar(modifier = Modifier
-            .padding(
-                horizontal = searchPadding, vertical = 10.dp
-            )
-            .fillMaxWidth(),
+        CanvasSearchBar(
+            modifier = Modifier
+                .padding(
+                    horizontal = searchPadding, vertical = 10.dp
+                )
+                .fillMaxWidth(),
             focusRequester = focusRequester,
             cornerRadius = cornerRadiusForSearchBar,
-            query = uiState.query,
+            query = topBarState.query,
             isBlurred = isSearchMode,
-            enabled = !(uiState.isRefreshing || uiState.isInitialLoading),
+            enabled = !(listState.isRefreshing || listState.isInitialLoading),
             onQueryChange = { query ->
                 onAction(CanvasListAction.QueryChange(query))
             },
@@ -960,7 +1038,7 @@ private fun CanvasListContent(
             PullToRefreshBox(
                 modifier = Modifier,
                 state = pullRefreshState,
-                isRefreshing = uiState.isRefreshing,
+                isRefreshing = listState.isRefreshing,
                 onRefresh = {
                     onAction(CanvasListAction.RefreshData)
                 },
@@ -970,12 +1048,12 @@ private fun CanvasListContent(
                         .fillMaxSize()
                         .nestedScroll(fabScrollConnection)
                         .blur(blurRadius),
-                    isLoading = uiState.isInitialLoading,
+                    isLoading = listState.isInitialLoading,
                     isBlurred = isSearchMode,
                     items = basePagingItems,
                     config = baseModeConfig,
-                    selectedIds = uiState.selectedIds,
-                    selectedPreviewId = uiState.selectedScribbleId,
+                    selectedIds = listState.selectedIds,
+                    selectedPreviewId = paneState.selectedScribbleId,
                     onClicked = { id ->
                         onAction(
                             CanvasListAction.CanvasItemInteractionAction(
@@ -997,7 +1075,7 @@ private fun CanvasListContent(
                     },
                 )
 
-                ConfirmationDialog(state = uiState.dialogState, onConfirm = {
+                ConfirmationDialog(state = dialogState.confirmationDialog, onConfirm = {
                     onAction(
                         CanvasListAction.Bulk(
                             BulkActionEvent.Confirm
@@ -1020,6 +1098,10 @@ private fun CanvasListContent(
             ) {
                 Box(modifier = Modifier
                     .fillMaxSize()
+                    .padding(
+                        horizontal = searchPadding
+                    )
+                    .imePadding()
                     .pointerInput(Unit) {
                         detectTapGestures {
                             keyboardController?.hide()
@@ -1038,20 +1120,43 @@ private fun CanvasListContent(
                             )
                     )
 
-                    if (uiState.showEmptyScribbles) {
-                        Text(
-                            text = "NO SCRIBBLES FOUND",
+                    if (listState.showEmptyScribbles) {
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .imePadding()
-                                .align(Alignment.Center),
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                .padding(horizontal = 24.dp)
+                                .shadow(
+                                    elevation = 12.dp,
+                                    shape = RoundedCornerShape(25)
+                                )
+                                .align(Alignment.Center)
+                        ) {
+
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .background(Color.White.copy(alpha = 0.18f))
+                                    .blur(10.dp)
+                                    .border(
+                                        width = 1.dp,
+                                        color = Color.White,
+                                        shape = RoundedCornerShape(25)
+                                    )
                             )
-                        )
+
+                            Text(
+                                text = "NO SCRIBBLES FOUND",
+                                modifier = Modifier
+                                    .padding(vertical = 4.dp)
+                                    .align(Alignment.Center),
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.headlineMedium.copy(
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+                        }
                     }
 
                     CanvasList(
@@ -1088,7 +1193,7 @@ private fun CanvasListContent(
             }
 
             androidx.compose.animation.AnimatedVisibility(
-                visible = !showDeleteBar && !isSearchMode && !showSortBar && !uiState.isInitialLoading && !uiState.isRefreshing,
+                visible = !showDeleteBar && !isSearchMode && !showSortBar && !listState.isInitialLoading && !listState.isRefreshing,
                 enter = fadeIn() + scaleIn(),
                 exit = fadeOut() + scaleOut(),
                 modifier = Modifier.align(Alignment.BottomEnd)
@@ -1104,7 +1209,7 @@ private fun CanvasListContent(
                             .align(Alignment.BottomEnd)
                             .padding(end = 16.dp, bottom = 16.dp),
                             metrics = canvasFloatingButtonMetrics,
-                            isFabExpanded = uiState.isFabExpanded,
+                            isFabExpanded = fabState.isFabExpanded,
                             onDrawClicked = {
                                 onAction(CanvasListAction.DrawCanvasClicked)
                             })
@@ -1121,7 +1226,8 @@ private fun PreviewPane(
     modifier: Modifier = Modifier,
     pagingItems: LazyPagingItems<CanvasSummary>,
     selectedIndex: Int,
-    onPageChanged: (Long) -> Unit
+    onPageChanged: (Long) -> Unit,
+    onAction: (CanvasListAction) -> Unit
 ) {
 
     val metrics = LocalPreviewCanvasMetrics.current
@@ -1184,7 +1290,6 @@ private fun PreviewPane(
         }
 
         if (selectedIndex < 0) {
-
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Center,
@@ -1257,7 +1362,9 @@ private fun PreviewPane(
                 modifier = Modifier.fillMaxSize(),
                 content = pagingItems[page] ?: return@HorizontalPager,
                 pageOffset = pagerState.getOffsetDistanceInPages(page),
-                infoCardChange = infoCardChange
+                infoCardChange = infoCardChange,
+                closePreview = { onAction(CanvasListAction.ClosePreview) },
+                editPreview = { onAction(CanvasListAction.EditPreview) }
             )
         }
     }
@@ -1269,7 +1376,7 @@ private fun DragHandle(
     totalWidthPx: Float,
     handleBoxWidth: Dp,
     onRevealChange: (Float) -> Unit,
-    onPaneStateChange: (PaneState) -> Unit,
+    onPaneStateChange: (PaneMode) -> Unit,
     stableAdaptiveState: StableAdaptiveState,
 ) {
     var localReveal by remember { mutableFloatStateOf(reveal) }
@@ -1329,10 +1436,10 @@ private fun DragHandle(
                 }
 
                 val finalState = when (localReveal) {
-                    0f -> PaneState.TwoPane.FullPreview
-                    0.5f -> PaneState.TwoPane.Split
-                    1f -> PaneState.TwoPane.FullList
-                    else -> PaneState.TwoPane.Split
+                    0f -> PaneMode.TwoPane.FullPreview
+                    0.5f -> PaneMode.TwoPane.Split
+                    1f -> PaneMode.TwoPane.FullList
+                    else -> PaneMode.TwoPane.Split
                 }
 
                 handleWidth = 8.dp

@@ -1,17 +1,25 @@
 package com.scribble.it.feature_canvas.presentation.canvasdraw.components
 
 import android.util.Log
-import android.view.ViewConfiguration
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -25,12 +33,16 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.scribble.it.feature_canvas.domain.model.stroke.CanvasStroke
 import com.scribble.it.feature_canvas.domain.model.stroke.Dot
 import com.scribble.it.feature_canvas.domain.model.stroke.PEN
+import com.scribble.it.feature_canvas.presentation.canvasdraw.state.ReplayState
 import com.scribble.it.ui.adaptive.scale.CanvasConstants
 
 //UI → Logical:
@@ -39,6 +51,18 @@ import com.scribble.it.ui.adaptive.scale.CanvasConstants
 //Logical → UI:
 //xUI = xLogical / PAGE_WIDTH * uiWidth == xLogical * (uiWidth / PAGE_WIDTH)
 
+data class PathSegment(
+    val path: Path,
+    val colorArgb: Int,
+    val brushNormalized: Float,
+)
+
+data class StrokeCache(
+    val segments: List<PathSegment>,
+    val dots: List<Dot>,
+    val totalSegments: Int
+)
+
 @Composable
 fun PaperSurface(
     modifier: Modifier,
@@ -46,20 +70,97 @@ fun PaperSurface(
     brushSize: Float,
     strokeColor: Color,
     pageColor: Color,
+    replayState: ReplayState,
+    replayTrigger: Int,
     canvasStrokes: List<CanvasStroke>,
     onUpdateCanvasStrokes: (CanvasStroke) -> Unit,
     onOffsetFractionChange: (Offset) -> Unit,
-    onCancelCurrentStroke: () -> Unit
+    onCancelCurrentStroke: () -> Unit,
+    onReplay: (ReplayState) -> Unit
 ) {
     val metrics = LocalResources.current.displayMetrics
-    val context = LocalContext.current
+    val activity = LocalActivity.current as ComponentActivity
 
+    var animationDuration by rememberSaveable { mutableIntStateOf(0) }
+    var savedProgress by rememberSaveable { mutableFloatStateOf(1f) }
+    var lastReplayTrigger by rememberSaveable { mutableIntStateOf(-1) }
+
+    val animatedProgress = remember { Animatable(savedProgress) }
+
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     var hasMoved by remember { mutableStateOf(false) }
-    val animatedProgress = remember { Animatable(1f) }
+
+    LaunchedEffect(replayState, replayTrigger) {
+        if (replayState == ReplayState.PLAYING) {
+            val strokeCount = canvasStrokes.count { it.penType == PEN.MOVE }
+            val durationPerStroke = 500
+            animationDuration = strokeCount * durationPerStroke
+
+            if (animatedProgress.value == 1f) {
+                animatedProgress.snapTo(0f)
+            }
+
+            if ((replayTrigger != lastReplayTrigger && replayTrigger > 0)) {
+                lastReplayTrigger = replayTrigger
+
+                animatedProgress.snapTo(0f)
+                animatedProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(animationDuration, easing = LinearEasing)
+                )
+            }
+
+            val remainingProgress = 1f - animatedProgress.value
+            val remainingDuration = (animationDuration * remainingProgress).toInt()
+
+            animatedProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(remainingDuration, easing = LinearEasing)
+            )
+        } else if (replayState == ReplayState.IDLE) {
+            animatedProgress.snapTo(1f)
+        }
+    }
+
+    DisposableEffect(replayState) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> {
+                    Log.d("PROGRESS_", activity.isChangingConfigurations.toString())
+
+                    if (replayState == ReplayState.PLAYING && !activity.isChangingConfigurations) {
+                        Log.d("PROGRESS_", "ON_PAUSE_CALLED")
+                        onReplay(ReplayState.PAUSED)
+                    }
+                }
+
+                else -> Unit
+            }
+        }
+
+        activity.lifecycle.addObserver(observer)
+
+        onDispose {
+            activity.lifecycle.removeObserver(observer)
+        }
+    }
+
+    LaunchedEffect(animatedProgress.value) {
+        savedProgress = animatedProgress.value
+        if (animatedProgress.value == 1f) {
+            onReplay(ReplayState.IDLE)
+        }
+    }
 
     Log.d(
         "BRUSH_BEFORE",
         "Brush: ${brushSize}mm = ${brushSize * (metrics.densityDpi / 25.4f)}px @ ${metrics.densityDpi} dpi"
+    )
+
+    val cache = rememberStrokeCache(
+        strokes = canvasStrokes,
+        canvasWidth = canvasSize.width.toFloat(),
+        canvasHeight = canvasSize.height.toFloat()
     )
 
     Box(
@@ -67,13 +168,15 @@ fun PaperSurface(
             .background(pageColor)
             .border(1.dp, Color.LightGray)
             .clipToBounds()
+            .onSizeChanged {
+                canvasSize = it
+            }
     ) {
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(drawingEnabled, brushSize, strokeColor) {
                     if (drawingEnabled) {
-                        val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent()
@@ -166,7 +269,7 @@ fun PaperSurface(
                                     // Detect system cancel
                                     !change.pressed && !change.changedToUp() -> {
                                         Log.d("GESTURE", "System cancelled the gesture!")
-                                         onCancelCurrentStroke()
+                                        onCancelCurrentStroke()
                                     }
                                 }
                             }
@@ -174,15 +277,131 @@ fun PaperSurface(
                     }
                 }
         ) {
-            drawNormalizedPath(
-                strokes = canvasStrokes,
-                progress = animatedProgress.value
-            )
+            if (animatedProgress.value < 1f) {
+                drawReplay(
+                    strokes = canvasStrokes,
+                    progress = animatedProgress.value
+                )
+            } else {
+                drawNormalizedPathCached(cache)
+            }
         }
     }
 }
 
-private fun DrawScope.drawNormalizedPath(
+private fun DrawScope.drawNormalizedPathCached(
+    cache: StrokeCache,
+) {
+    cache.segments.forEach { segment ->
+        drawPath(
+            path = segment.path,
+            color = Color(segment.colorArgb),
+            style = Stroke(width = segment.brushNormalized * size.width)
+        )
+    }
+    cache.dots.forEach { dot ->
+        drawCircle(
+            radius = dot.radius * size.width,
+            center = dot.offset,
+            color = Color(dot.colorArgb),
+            style = Fill
+        )
+    }
+}
+
+private fun buildStrokeCache(
+    strokes: List<CanvasStroke>,
+    scaleX: Float,
+    scaleY: Float
+): StrokeCache {
+
+    if (strokes.isEmpty()) {
+        return StrokeCache(emptyList(), emptyList(), 0)
+    }
+
+    val segments = mutableListOf<PathSegment>()
+    val dots = mutableListOf<Dot>()
+
+    var currentPath = Path()
+    var currentColor = strokes.first().colorArgb
+    var currentBrush = strokes.first().brushSizeNormalized
+
+    val first = strokes.first()
+    currentPath.moveTo(first.x * scaleX, first.y * scaleY)
+
+    for (i in 0 until strokes.size - 1) {
+
+        val start = strokes[i]
+        val end = strokes[i + 1]
+
+        val startOffset = Offset(start.x * scaleX, start.y * scaleY)
+        val endOffset = Offset(end.x * scaleX, end.y * scaleY)
+
+        if (end.colorArgb != currentColor || end.brushSizeNormalized != currentBrush) {
+            segments.add(
+                PathSegment(
+                    path = currentPath,
+                    colorArgb = currentColor,
+                    brushNormalized = currentBrush,
+                )
+            )
+
+            currentPath = Path()
+            currentColor = end.colorArgb
+            currentBrush = end.brushSizeNormalized
+            currentPath.moveTo(startOffset.x, startOffset.y)
+        }
+
+        when (end.penType) {
+
+            PEN.MOVE -> {
+                currentPath.moveTo(endOffset.x, endOffset.y)
+            }
+
+            PEN.DRAW -> {
+                currentPath.lineTo(endOffset.x, endOffset.y)
+            }
+
+            PEN.DOT -> {
+                dots.add(
+                    Dot(
+                        offset = endOffset,
+                        progress = 1f,
+                        radius = currentBrush,
+                        colorArgb = currentColor
+                    )
+                )
+            }
+        }
+    }
+
+    segments.add(
+        PathSegment(
+            path = currentPath,
+            colorArgb = currentColor,
+            brushNormalized = currentBrush,
+        )
+    )
+
+    return StrokeCache(segments, dots, totalSegments = strokes.size - 1)
+}
+
+@Composable
+fun rememberStrokeCache(
+    strokes: List<CanvasStroke>,
+    canvasWidth: Float,
+    canvasHeight: Float
+): StrokeCache {
+
+    val scaleX = canvasWidth / CanvasConstants.PAGE_WIDTH
+    val scaleY = canvasHeight / CanvasConstants.PAGE_HEIGHT
+
+    return remember(strokes, scaleX, scaleY) {
+        buildStrokeCache(strokes, scaleX, scaleY)
+    }
+}
+
+private fun DrawScope.drawReplay(
     strokes: List<CanvasStroke>,
     progress: Float = 1f,
 ) {
@@ -216,7 +435,7 @@ private fun DrawScope.drawNormalizedPath(
             drawPath(
                 path,
                 Color(currentColor),
-                style = Stroke(width = currentBrush * size.width)
+                style = Stroke(width = (currentBrush * size.width))
             )
             path.reset()
             currentColor = end.colorArgb
@@ -253,16 +472,15 @@ private fun DrawScope.drawNormalizedPath(
     }
 
     // draw remaining path
-    drawPath(path, Color(currentColor), style = Stroke(width = currentBrush * size.width))
+    drawPath(path, Color(currentColor), style = Stroke(width = (currentBrush * size.width)))
 
     // draw dots
     dotOffsets.forEach { dot ->
         drawCircle(
-            radius = dot.progress * (dot.radius * size.width),
+            radius = dot.progress * ((dot.radius * size.width)),
             center = dot.offset,
             color = Color(dot.colorArgb),
             style = Fill
         )
     }
 }
-

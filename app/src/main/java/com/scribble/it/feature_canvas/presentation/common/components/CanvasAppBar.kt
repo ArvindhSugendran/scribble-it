@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowDown
@@ -120,12 +120,12 @@ fun CanvasAppBarPreview() {
                 onClick = { },
                 enabled = true
             ) {
-                AnimatedContent(targetState = true) { grid ->
+                AnimatedContent(targetState = false) { grid ->
                     Icon(
                         imageVector = if (grid)
                             Icons.Default.GridView
                         else
-                            Icons.AutoMirrored.Default.ViewList,
+                            Icons.AutoMirrored.Default.ListAlt,
                         contentDescription = "Grid / List View",
                         tint = MaterialTheme.colorScheme.onSurface
                     )

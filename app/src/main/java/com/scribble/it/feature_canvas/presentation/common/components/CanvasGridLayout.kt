@@ -19,7 +19,7 @@ fun CanvasGridLayout(
     state: LazyGridState,
     userScrollEnabled: Boolean = true,
     contentPaddingValues: PaddingValues = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 30.dp),
-    verticalSpacing: Dp = 12.dp,
+    verticalSpacing: Dp = 15.dp,
     horizontalSpacing: Dp = 12.dp,
     content: LazyGridScope.() -> Unit
 ) {

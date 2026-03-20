@@ -120,5 +120,12 @@ dependencies {
     //Preferences DataStore
     implementation(libs.androidx.datastore.preferences)
 
+    // Coil for image loading
     implementation(libs.coil.compose)
+
+    // splash screen api
+    implementation(libs.androidx.core.splashscreen)
+
+    implementation(libs.androidx.lifecycle.process)
+
 }

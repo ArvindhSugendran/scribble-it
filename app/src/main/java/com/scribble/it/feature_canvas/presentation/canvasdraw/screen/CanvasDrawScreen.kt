@@ -1,11 +1,18 @@
 package com.scribble.it.feature_canvas.presentation.canvasdraw.screen
 
+import android.util.Log
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -27,9 +34,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -46,6 +58,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -54,17 +67,22 @@ import com.scribble.it.feature_canvas.presentation.canvasdraw.action.CanvasDrawA
 import com.scribble.it.feature_canvas.presentation.canvasdraw.components.CanvasDrawActionButtons
 import com.scribble.it.feature_canvas.presentation.canvasdraw.components.CanvasDrawAppBar
 import com.scribble.it.feature_canvas.presentation.canvasdraw.components.CanvasDrawStokeOptions
+import com.scribble.it.feature_canvas.presentation.canvasdraw.components.CanvasReplayControls
 import com.scribble.it.feature_canvas.presentation.canvasdraw.components.CanvasViewport
 import com.scribble.it.feature_canvas.presentation.canvasdraw.components.PaperSurface
 import com.scribble.it.feature_canvas.presentation.canvasdraw.event.CanvasDrawEvent
 import com.scribble.it.feature_canvas.presentation.canvasdraw.state.CanvasDrawUiState
+import com.scribble.it.feature_canvas.presentation.canvasdraw.state.ReplayState
 import com.scribble.it.feature_canvas.presentation.canvasdraw.ui.adaptive.metrics.retrieveCanvasDrawActionButtonsMetrics
 import com.scribble.it.feature_canvas.presentation.canvasdraw.ui.adaptive.metrics.retrieveCanvasDrawAppBarMetrics
 import com.scribble.it.feature_canvas.presentation.canvasdraw.ui.adaptive.metrics.retrieveCanvasViewportMetrics
 import com.scribble.it.ui.adaptive.layoutConfig.getLayoutConfiguration
 import com.scribble.it.ui.adaptive.scale.ScreenScale
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 @Composable
 fun CanvasDrawScreen(
@@ -90,8 +108,14 @@ fun CanvasDrawScreen(
 
     val imeVisible = rememberImeVisible()
 
+    val canvasContentState = uiState.canvasContentState
+    val viewportState = uiState.viewportUiState
+    val topBarState = uiState.topBarUiState
+    val drawActionState = uiState.drawActionButtonsUiState
+    val replay = uiState.replayUiState
+
     val blurRadius by animateDpAsState(
-        targetValue = if (uiState.showStrokeOptions) 16.dp else 0.dp,
+        targetValue = if (drawActionState.showStrokeOptions) 16.dp else 0.dp,
         label = "blurRadius"
     )
 
@@ -142,23 +166,33 @@ fun CanvasDrawScreen(
                 modifier = modifier
                     .fillMaxSize()
             ) {
-                CanvasDrawAppBar(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .zIndex(1f),
-                    metrics = canvasDrawAppBarMetrics,
-                    title = uiState.canvasTitle,
-                    drawingEnabled = uiState.drawingEnabled,
-                    onTitleChange = { canvasTitle ->
-                        onAction(CanvasDrawAction.OnTitleChange(canvasTitle))
-                    },
-                    onDrawingEnable = {
-                        onAction(CanvasDrawAction.EnableDrawing)
-                    },
-                    onBackPressed = {
-                        onAction(CanvasDrawAction.OnBackPressed)
-                    }
-                )
+
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = replay.replayState == ReplayState.IDLE,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically(),
+                ) {
+                    CanvasDrawAppBar(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .zIndex(1f),
+                        metrics = canvasDrawAppBarMetrics,
+                        title = topBarState.canvasTitle,
+                        drawingEnabled = topBarState.drawingEnabled,
+                        onTitleChange = { canvasTitle ->
+                            onAction(CanvasDrawAction.OnTitleChange(canvasTitle))
+                        },
+                        onDrawingEnable = {
+                            onAction(CanvasDrawAction.EnableDrawing)
+                        },
+                        onBackPressed = {
+                            onAction(CanvasDrawAction.OnBackPressed)
+                        },
+                        animate = {
+                            onAction(CanvasDrawAction.Replay(ReplayState.PLAYING))
+                        }
+                    )
+                }
 
                 BoxWithConstraints(
                     modifier = Modifier
@@ -172,11 +206,15 @@ fun CanvasDrawScreen(
                     }
 
                     val canvasViewportMetrics =
-                        remember(viewportScale, layoutConfig, uiState.canvasDrawing.pageFormat) {
+                        remember(
+                            viewportScale,
+                            layoutConfig,
+                            canvasContentState.canvasDrawing.pageFormat
+                        ) {
                             retrieveCanvasViewportMetrics(
                                 scale = viewportScale,
                                 layout = layoutConfig,
-                                pageFormat = uiState.canvasDrawing.pageFormat
+                                pageFormat = canvasContentState.canvasDrawing.pageFormat
                             )
                         }
 
@@ -192,8 +230,9 @@ fun CanvasDrawScreen(
                             .fillMaxSize(),
                         maxWidth = maxWidth,
                         maxHeight = maxHeight,
-                        offsetFraction = uiState.viewportUiState.offsetFraction,
+                        offsetFraction = viewportState.offsetFraction,
                         metrics = canvasViewportMetrics,
+                        replayState = replay.replayState,
                         onOffsetFractionChange = { offset: Offset ->
                             onAction(CanvasDrawAction.UpdateOffsetFraction(offset))
                         },
@@ -208,11 +247,13 @@ fun CanvasDrawScreen(
                                     }
                                     .size(transform.viewportSize)
                                     .blur(blurRadius),
-                                drawingEnabled = uiState.drawingEnabled,
-                                brushSize = uiState.brushSize.mm,
-                                strokeColor = uiState.strokeColor,
-                                pageColor = Color(uiState.canvasDrawing.pageColor),
-                                canvasStrokes = uiState.canvasDrawing.canvasStrokes,
+                                drawingEnabled = topBarState.drawingEnabled,
+                                brushSize = canvasContentState.brushSize.mm,
+                                strokeColor = canvasContentState.strokeColor,
+                                pageColor = Color(canvasContentState.canvasDrawing.pageColor),
+                                canvasStrokes = canvasContentState.canvasDrawing.canvasStrokes,
+                                replayTrigger = replay.replayTrigger,
+                                replayState = replay.replayState,
                                 onUpdateCanvasStrokes = { canvasStroke: CanvasStroke ->
                                     onAction(CanvasDrawAction.UpdateStrokes(canvasStroke))
                                 },
@@ -221,72 +262,231 @@ fun CanvasDrawScreen(
                                 },
                                 onCancelCurrentStroke = {
                                     onAction(CanvasDrawAction.CancelLastStroke)
+                                },
+                                onReplay = {
+                                    onAction(CanvasDrawAction.Replay(it))
                                 }
                             )
                         }
                     )
 
-                    CanvasDrawActionButtons(
-                        modifier = rootModifier,
-                        metrics = canvasDrawActionButtonsMetrics,
-                        strokeOptions = uiState.showStrokeOptions,
-                        showStrokeOptions = { show ->
-                            onAction(CanvasDrawAction.ShowStrokeOptions(show))
-                        },
-                        actionButtonsOption = uiState.showActionButtonsOption,
-                        showActionButtonsOption = { show ->
-                            onAction(CanvasDrawAction.ShowActionButtonsOption(show))
-                        },
-                        undoDrawing = {onAction(CanvasDrawAction.UndoDrawing)},
-                        redoDrawing = {onAction(CanvasDrawAction.RedoDrawing)},
-                        clearDrawing = {onAction(CanvasDrawAction.ClearDrawing)},
-                    )
-
                     androidx.compose.animation.AnimatedVisibility(
-                        visible = blurRadius == 16.dp,
-                        enter = fadeIn() + scaleIn(),
-                        exit = fadeOut() + scaleOut(),
-                        modifier = Modifier
-                            .fillMaxSize()
+                        visible = replay.replayState == ReplayState.IDLE,
+                        enter = fadeIn() + slideInHorizontally(
+                            initialOffsetX = { it }
+                        ),
+                        exit = fadeOut() + slideOutHorizontally(
+                            targetOffsetX = { it }
+                        ),
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.Black.copy(alpha = 0.7f))
-                                    .pointerInput(Unit) {
-                                        detectTapGestures {
-                                            onAction(CanvasDrawAction.ShowStrokeOptions(false))
+                            if (drawActionState.showActionButtonsOption) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.7f))
+                                        .pointerInput(Unit) {
+                                            detectTapGestures {
+                                                onAction(
+                                                    CanvasDrawAction.ShowActionButtonsOption(
+                                                        false
+                                                    )
+                                                )
+                                            }
                                         }
-                                    }
+                                )
+                            }
+
+                            if (drawActionState.showStrokeOptions) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .pointerInput(Unit) {
+                                            detectTapGestures {
+                                                onAction(
+                                                    CanvasDrawAction.ShowStrokeOptions(
+                                                        false
+                                                    )
+                                                )
+                                            }
+                                        }
+                                )
+                            }
+
+                            CanvasDrawActionButtons(
+                                modifier = rootModifier,
+                                metrics = canvasDrawActionButtonsMetrics,
+                                strokeOptions = drawActionState.showStrokeOptions,
+                                showStrokeOptions = { show ->
+                                    onAction(CanvasDrawAction.ShowStrokeOptions(show))
+                                },
+                                actionButtonsOption = drawActionState.showActionButtonsOption,
+                                showActionButtonsOption = { show ->
+                                    onAction(CanvasDrawAction.ShowActionButtonsOption(show))
+                                },
+                                undoDrawing = { onAction(CanvasDrawAction.UndoDrawing) },
+                                redoDrawing = { onAction(CanvasDrawAction.RedoDrawing) },
+                                clearDrawing = { onAction(CanvasDrawAction.ClearDrawing) },
                             )
 
-                            CanvasDrawStokeOptions(
-                                modifier = Modifier
-                                    .zIndex(1f)
-                                    .pointerInput(Unit) {
-                                        awaitPointerEventScope {
-                                            while (true) awaitPointerEvent()
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = blurRadius == 16.dp,
+                                enter = fadeIn() + scaleIn(),
+                                exit = fadeOut() + scaleOut(),
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CanvasDrawStokeOptions(
+                                        modifier = Modifier
+                                            .zIndex(2f)
+                                            .pointerInput(Unit) {
+                                                detectTapGestures { }
+                                            },
+                                        selectedBrush = canvasContentState.brushSize,
+                                        selectedPageColor = Color(canvasContentState.canvasDrawing.pageColor),
+                                        selectedStrokeColor = canvasContentState.strokeColor,
+                                        strokeColorPalette = strokeColorPalette.filter {
+                                            it != Color(
+                                                canvasContentState.canvasDrawing.pageColor
+                                            )
+                                        },
+                                        onSelectBrush = { brush ->
+                                            onAction(CanvasDrawAction.ChangeBrushSize(brush))
+                                        },
+                                        onSelectPageColor = { pageColor ->
+                                            onAction(CanvasDrawAction.ChangePageColor(pageColor))
+                                        },
+                                        onSelectStrokeColor = { strokeColor ->
+                                            onAction(CanvasDrawAction.ChangeStrokeColor(strokeColor))
                                         }
-                                    },
-                                selectedBrush = uiState.brushSize,
-                                selectedPageColor = Color(uiState.canvasDrawing.pageColor),
-                                selectedStrokeColor = uiState.strokeColor,
-                                strokeColorPalette = strokeColorPalette.filter { it != Color(uiState.canvasDrawing.pageColor) },
-                                onSelectBrush = { brush ->
-                                    onAction(CanvasDrawAction.ChangeBrushSize(brush))
-                                },
-                                onSelectPageColor = { pageColor ->
-                                    onAction(CanvasDrawAction.ChangePageColor(pageColor))
-                                },
-                                onSelectStrokeColor = { strokeColor ->
-                                    onAction(CanvasDrawAction.ChangeStrokeColor(strokeColor))
+                                    )
                                 }
+                            }
+                        }
+                    }
+
+                    if (replay.replayState != ReplayState.IDLE) {
+                        var previousReplayState by rememberSaveable { mutableStateOf(ReplayState.IDLE) }
+                        var controlsVisible by rememberSaveable { mutableStateOf(false) }
+                        var autoHideJob by remember { mutableStateOf<Job?>(null) }
+                        val scope = rememberCoroutineScope()
+
+                        val activity = LocalActivity.current as ComponentActivity
+                        var isAppInForeground by remember { mutableStateOf(true) }
+
+                        fun restartAutoHide() {
+                            Log.d("JOB", "CALLED RESTART")
+
+                            if(isAppInForeground) {
+                                autoHideJob?.cancel()
+                                autoHideJob = scope.launch {
+                                    delay(2000)
+                                    controlsVisible = false
+                                    Log.d("JOB", "DID THE JOB")
+                                }
+                            }
+                        }
+
+                        DisposableEffect(activity) {
+                            val observer = LifecycleEventObserver { _, event ->
+                                when (event) {
+                                    Lifecycle.Event.ON_PAUSE -> {
+                                        if (!activity.isChangingConfigurations) {
+                                            Log.d(
+                                                "JOB",
+                                                "ON_PAUSE"
+                                            )
+                                            isAppInForeground = false
+                                            autoHideJob?.cancel()
+                                        }
+                                    }
+
+                                    Lifecycle.Event.ON_RESUME -> {
+                                        if (!isAppInForeground) {
+                                            Log.d(
+                                                "JOB",
+                                                "ON_RESUME"
+                                            )
+                                            isAppInForeground = true
+                                            controlsVisible = true
+                                        } else {
+                                            if(controlsVisible) restartAutoHide()
+                                        }
+                                    }
+
+                                    else -> Unit
+                                }
+                            }
+
+                            activity.lifecycle.addObserver(observer)
+                            onDispose { activity.lifecycle.removeObserver(observer) }
+                        }
+
+                        LaunchedEffect(replay.replayState) {
+                            Log.d(
+                                "JOB",
+                                "App In ForeGround: $isAppInForeground " +
+                                        "REPLAY STATE: ${replay.replayState} " +
+                                        "PREVIOUS REPLAY STATE: $previousReplayState"
                             )
+                            if (isAppInForeground && previousReplayState != replay.replayState) {
+                                controlsVisible = true
+                                previousReplayState = replay.replayState
+                                restartAutoHide()
+                            } else {
+                                if(controlsVisible) restartAutoHide()
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .pointerInput(Unit) {
+                                    detectTapGestures {
+                                        if (controlsVisible) {
+                                            controlsVisible = false
+                                            autoHideJob?.cancel()
+                                        } else {
+                                            controlsVisible = true
+                                            restartAutoHide()
+                                        }
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = controlsVisible,
+                                enter = fadeIn(),
+                                exit = fadeOut()
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.7f))
+                                )
+                            }
+
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = controlsVisible,
+                                enter = fadeIn() + scaleIn(),
+                                exit = fadeOut() + scaleOut(),
+                                modifier = Modifier.zIndex(1f)
+                            ) {
+                                CanvasReplayControls(
+                                    replayState = replay.replayState,
+                                    onReplay = { onAction(CanvasDrawAction.RestartReplay) },
+                                    onPlay = { onAction(CanvasDrawAction.Replay(ReplayState.PLAYING)) },
+                                    onPause = { onAction(CanvasDrawAction.Replay(ReplayState.PAUSED)) },
+                                    onStop = { onAction(CanvasDrawAction.Replay(ReplayState.IDLE)) }
+                                )
+                            }
                         }
                     }
                 }
@@ -303,11 +503,11 @@ fun CanvasDrawScreen(
         )
     }
 
-    BackHandler(enabled = uiState.showStrokeOptions) {
+    BackHandler(enabled = drawActionState.showStrokeOptions) {
         onAction(CanvasDrawAction.ShowStrokeOptions(false))
     }
 
-    BackHandler(enabled = !uiState.showStrokeOptions) {
+    BackHandler(enabled = !drawActionState.showStrokeOptions) {
         onAction(CanvasDrawAction.OnBackPressed)
     }
 }

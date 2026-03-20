@@ -49,7 +49,9 @@ fun PreviewContent(
     modifier: Modifier = Modifier,
     content: CanvasSummary,
     pageOffset: Float,
-    infoCardChange: Boolean
+    infoCardChange: Boolean,
+    closePreview: () -> Unit,
+    editPreview: () -> Unit
 ) {
     val absOffset = abs(pageOffset).coerceIn(0f, 1f)
     val scale = 1f - absOffset * 0.8f
@@ -63,10 +65,11 @@ fun PreviewContent(
                 this.alpha = alpha
             }, horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        PreviewCanvasAppBar(modifier = Modifier.fillMaxWidth(),
+        PreviewCanvasAppBar(
+            modifier = Modifier.fillMaxWidth(),
             title = content.title,
-            closePreview = {},
-            editPreview = {})
+            closePreview = {closePreview()},
+            editPreview = {editPreview()})
 
         Spacer(Modifier.height(20.dp))
 

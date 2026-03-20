@@ -1,6 +1,5 @@
 package com.scribble.it.feature_canvas.presentation.canvasdraw.components
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -16,7 +15,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Animation
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -47,7 +45,8 @@ fun CanvasDrawAppBar(
     drawingEnabled: Boolean,
     onTitleChange: (TextFieldValue) -> Unit,
     onDrawingEnable: () -> Unit,
-    onBackPressed: () -> Unit
+    onBackPressed: () -> Unit,
+    animate: () -> Unit
 ) {
     Surface(
         modifier = modifier
@@ -57,7 +56,7 @@ fun CanvasDrawAppBar(
                     radius = 5.dp,
                     spread = 0.dp,
                     color = Color(0x40000000),
-                    offset = DpOffset(x = 3.dp, y = 5.dp)
+                    offset = DpOffset(x = 0.dp, y = 5.dp)
                 )
             ),
         color = MaterialTheme.colorScheme.surface,
@@ -127,24 +126,12 @@ fun CanvasDrawAppBar(
                 horizontalArrangement = Arrangement.spacedBy(metrics.iconsSpacedByPadding),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                AnimatedVisibility(
-                    visible = metrics.iconVisibility,
-                ) {
-                    IconButton(
-                        modifier = Modifier.size(35.dp),
-                        onClick = {}
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = "Info",
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                }
-                
+
                 IconButton(
                     modifier = Modifier.size(35.dp),
-                    onClick = {}
+                    onClick = {
+                        animate()
+                    }
                 ) {
                     Icon(
                         imageVector = Icons.Default.Animation,
@@ -189,6 +176,7 @@ fun PreviewCanvasDrawTopBar() {
         drawingEnabled = false,
         onTitleChange = {},
         onDrawingEnable = {},
-        onBackPressed = {}
+        onBackPressed = {},
+        animate = {}
     )
 }

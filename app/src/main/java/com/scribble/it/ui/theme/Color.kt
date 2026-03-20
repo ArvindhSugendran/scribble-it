@@ -56,15 +56,15 @@ val Grey99 = Color(0xFFFBFDFD)
 // =======================
 // Variant Palette (surfaces/containers)
 // =======================
-val Graphite10 = Color(0xFF14110E)
-val Graphite20 = Color(0xFF201C18)
-val Graphite30 = Color(0xFF2D2722)
-val Graphite50 = Color(0xFF5C524A)
-val Graphite60 = Color(0xFF756A60)
-val Graphite80 = Color(0xFFCFC6BD)
-val Graphite90 = Color(0xFFE7E1DB)
-val Graphite95 = Color(0xFFF2EDE8)
-val Graphite99 = Color(0xFFFCFAF8)
+val AmberGraphite10 = Color(0xFF181410)
+val AmberGraphite20 = Color(0xFF24201B)
+val AmberGraphite30 = Color(0xFF312B24)
+val AmberGraphite50 = Color(0xFF5F554B)
+val AmberGraphite60 = Color(0xFF786D63)
+val AmberGraphite80 = Color(0xFFD3C8BC)
+val AmberGraphite90 = Color(0xFFEAE2D9)
+val AmberGraphite95 = Color(0xFFF4EEE7)
+val AmberGraphite99 = Color(0xFFFDFBF8)
 
 // Custom Colors
 @Immutable

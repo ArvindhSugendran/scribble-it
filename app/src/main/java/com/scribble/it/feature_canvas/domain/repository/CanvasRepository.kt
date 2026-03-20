@@ -3,6 +3,7 @@ package com.scribble.it.feature_canvas.domain.repository
 import androidx.paging.PagingData
 import com.scribble.it.feature_canvas.domain.model.canvas.CanvasDrawing
 import com.scribble.it.feature_canvas.domain.model.canvasSummary.CanvasSummary
+import com.scribble.it.feature_canvas.domain.model.operation.SortOption
 import com.scribble.it.feature_canvas.presentation.common.state.CanvasViewMode
 import kotlinx.coroutines.flow.Flow
 
@@ -27,7 +28,15 @@ interface CanvasRepository {
 
     suspend fun restoreCanvases(canvasIds: Set<Long>): Int
 
-    suspend fun setCanvasViewMode(mode: CanvasViewMode)
+    suspend fun setScribbleViewMode(mode: CanvasViewMode)
 
-    fun getCanvasViewMode(): Flow<CanvasViewMode>
+    fun getScribbleViewMode(): Flow<CanvasViewMode>
+
+    suspend fun setScribbleSortMode(mode: SortOption)
+
+    fun getScribbleSortMode(): Flow<SortOption>
+
+    suspend fun setOnBoardingCompleted()
+
+    fun getOnBoardingStatus(): Flow<Boolean>
 }

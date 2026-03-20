@@ -78,7 +78,7 @@ fun CanvasDrawActionButtons(
     var actionButtonsWidthPx = with(density) { 66.dp.toPx().roundToInt() }
 
     LaunchedEffect(strokeOptions, actionButtonsOption) {
-        Log.d("OPTIONS", "STROKE OPTIONS: $strokeOptions : ACTION OPTIONS: $actionButtonsOption")
+        Log.d("REVEAL", "STROKE OPTIONS: $strokeOptions : ACTION OPTIONS: $actionButtonsOption")
         reveal = if (actionButtonsOption && !strokeOptions)
             0f
         else

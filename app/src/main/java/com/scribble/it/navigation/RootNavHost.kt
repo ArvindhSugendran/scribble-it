@@ -26,18 +26,39 @@ import com.scribble.it.feature_canvas.presentation.canvaslist.viewmodel.CanvasLi
 import com.scribble.it.feature_canvas.presentation.canvasrecycle.navigation.CanvasRecycleRoute
 import com.scribble.it.feature_canvas.presentation.canvasrecycle.screen.CanvasRecycleScreen
 import com.scribble.it.feature_canvas.presentation.canvasrecycle.viewmodel.CanvasRecycleViewModel
+import com.scribble.it.feature_gate.navigation.GateRoute
+import com.scribble.it.feature_gate.presentation.screen.GateScreen
 import com.scribble.it.feature_onboarding.presentation.navigation.OnboardingRoute
 import com.scribble.it.feature_onboarding.presentation.screen.OnboardingScreen
 import com.scribble.it.feature_onboarding.presentation.viewmodel.OnboardingViewModel
 
 @Composable
 fun RootNavHost(
-    navController: NavHostController
+    navController: NavHostController,
 ) {
     NavHost(
         navController = navController,
-        startDestination = OnboardingRoute
+        startDestination = GateRoute
     ) {
+
+        composable<GateRoute> {
+            GateScreen(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                onNavigateToCanvasScreen = {
+                    navController.navigate(CanvasListRoute) {
+                        popUpTo(GateRoute) {inclusive = true}
+                    }
+                },
+                onNavigateToOnboardingScreen = {
+                    navController.navigate(OnboardingRoute) {
+                        popUpTo(GateRoute) {inclusive = true}
+                    }
+                }
+            )
+        }
+
         composable<OnboardingRoute> {
             val viewModel: OnboardingViewModel = hiltViewModel()
             val uiState by viewModel.onBoardingUiState.collectAsStateWithLifecycle()

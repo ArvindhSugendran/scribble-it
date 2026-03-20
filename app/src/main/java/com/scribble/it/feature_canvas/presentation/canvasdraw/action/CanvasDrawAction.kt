@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.TextFieldValue
 import com.scribble.it.feature_canvas.domain.model.stroke.CanvasStroke
 import com.scribble.it.feature_canvas.presentation.canvasdraw.state.BrushSize
+import com.scribble.it.feature_canvas.presentation.canvasdraw.state.ReplayState
 
 sealed class CanvasDrawAction {
     data class OnTitleChange(val title: TextFieldValue): CanvasDrawAction()
@@ -25,5 +26,8 @@ sealed class CanvasDrawAction {
     data object RedoDrawing: CanvasDrawAction()
     data object ClearDrawing: CanvasDrawAction()
 
-    data object OnBackPressed : CanvasDrawAction()
+    data object OnBackPressed: CanvasDrawAction()
+
+    data class Replay(val replayState: ReplayState): CanvasDrawAction()
+    data object RestartReplay: CanvasDrawAction()
 }

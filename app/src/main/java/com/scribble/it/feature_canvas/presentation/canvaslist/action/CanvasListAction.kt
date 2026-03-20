@@ -2,7 +2,7 @@ package com.scribble.it.feature_canvas.presentation.canvaslist.action
 
 import androidx.compose.ui.text.input.TextFieldValue
 import com.scribble.it.feature_canvas.domain.model.operation.SortOption
-import com.scribble.it.feature_canvas.presentation.canvaslist.state.PaneState
+import com.scribble.it.feature_canvas.presentation.canvaslist.state.PaneMode
 import com.scribble.it.feature_canvas.presentation.common.action.BulkActionEvent
 import com.scribble.it.feature_canvas.presentation.common.action.CanvasItemInteraction
 import com.scribble.it.feature_canvas.presentation.common.state.TopBarMode
@@ -47,5 +47,9 @@ sealed class CanvasListAction {
     data class OnPageChanged(val id: Long): CanvasListAction()
 
     //Layout mode Action
-    data class OnPaneChanged(val paneState: PaneState): CanvasListAction()
+    data class OnPaneChanged(val paneMode: PaneMode): CanvasListAction()
+
+    // Preview Action
+    data object ClosePreview: CanvasListAction()
+    data object EditPreview: CanvasListAction()
 }

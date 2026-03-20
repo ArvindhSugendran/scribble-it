@@ -1,0 +1,6 @@
+package com.scribble.it.feature_canvas.presentation.canvasdraw.state
+
+data class ReplayUiState(
+    val replayState: ReplayState = ReplayState.IDLE,
+    val replayTrigger: Int = 0
+)

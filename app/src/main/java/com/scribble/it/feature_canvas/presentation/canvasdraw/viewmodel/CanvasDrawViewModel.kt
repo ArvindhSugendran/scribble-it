@@ -21,7 +21,9 @@ import com.scribble.it.feature_canvas.domain.usecase.SaveCanvasUseCase
 import com.scribble.it.feature_canvas.presentation.canvasdraw.action.CanvasDrawAction
 import com.scribble.it.feature_canvas.presentation.canvasdraw.event.CanvasDrawEvent
 import com.scribble.it.feature_canvas.presentation.canvasdraw.navigation.CanvasDrawRoute
+import com.scribble.it.feature_canvas.presentation.canvasdraw.state.CanvasContentState
 import com.scribble.it.feature_canvas.presentation.canvasdraw.state.CanvasDrawUiState
+import com.scribble.it.feature_canvas.presentation.canvasdraw.state.ReplayState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -59,7 +61,7 @@ class CanvasDrawViewModel @Inject constructor(
     )
 
     private val _canvasDrawUiState =
-        MutableStateFlow(CanvasDrawUiState(canvasDrawing = CanvasDrawing()))
+        MutableStateFlow(CanvasDrawUiState(canvasContentState = CanvasContentState(canvasDrawing = CanvasDrawing())))
     val canvasDrawUiState: StateFlow<CanvasDrawUiState> = _canvasDrawUiState.asStateFlow()
 
     private val eventChannel = Channel<CanvasDrawEvent>(Channel.BUFFERED)
@@ -92,11 +94,17 @@ class CanvasDrawViewModel @Inject constructor(
                                 Log.d("CanvasById", "Result: ${result.data}")
 
                                 val canvasDrawing = result.data
-                                _canvasDrawUiState.update {
-                                    it.copy(
-                                        canvasDrawing = canvasDrawing,
-                                        canvasTitle = TextFieldValue(canvasDrawing.title),
-                                        strokeColor = if (canvasDrawing.pageColor == Color.Black.toArgb()) Color.White else Color.Black
+                                _canvasDrawUiState.update { state ->
+                                    state.copy(
+                                        canvasContentState = state.canvasContentState.copy(
+                                            canvasDrawing = canvasDrawing,
+                                            strokeColor = if (canvasDrawing.pageColor == Color.Black.toArgb()) Color.White else Color.Black
+                                        ),
+                                        topBarUiState = state.topBarUiState.copy(
+                                            canvasTitle = TextFieldValue(
+                                                canvasDrawing.title
+                                            )
+                                        )
                                     )
                                 }
                             }
@@ -110,76 +118,104 @@ class CanvasDrawViewModel @Inject constructor(
         when (action) {
 
             is CanvasDrawAction.ChangeBrushSize -> {
-                _canvasDrawUiState.update {
-                    it.copy(
-                        brushSize = action.brushSize,
+                _canvasDrawUiState.update { state ->
+                    state.copy(
+                        canvasContentState = state.canvasContentState.copy(brushSize = action.brushSize)
                     )
                 }
             }
 
             is CanvasDrawAction.ChangePageColor -> {
                 val (fixedStrokes, fixedBrushColor) = onPageColorChanged(action.pageColor)
-                _canvasDrawUiState.update {
-                    it.copy(
-                        canvasDrawing = it.canvasDrawing.copy(
-                            pageColor = action.pageColor.toArgb(),
-                            canvasStrokes = fixedStrokes
-                        ),
-                        strokeColor = fixedBrushColor,
+                _canvasDrawUiState.update { state ->
+                    state.copy(
+                        canvasContentState = state.canvasContentState.copy(
+                            canvasDrawing = state.canvasContentState.canvasDrawing.copy(
+                                pageColor = action.pageColor.toArgb(),
+                                canvasStrokes = fixedStrokes
+                            ),
+                            strokeColor = fixedBrushColor,
+                        )
                     )
                 }
                 markDirty()
             }
 
             is CanvasDrawAction.ChangeStrokeColor -> {
-                _canvasDrawUiState.update {
-                    it.copy(
-                        strokeColor = action.strokeColor,
+                _canvasDrawUiState.update { state ->
+                    state.copy(
+                        canvasContentState = state.canvasContentState.copy(
+                            strokeColor = action.strokeColor,
+                        )
                     )
                 }
             }
 
-            is CanvasDrawAction.EnableDrawing -> _canvasDrawUiState.update {
-                it.copy(
-                    drawingEnabled = !it.drawingEnabled,
-                    showActionButtonsOption = false
+            is CanvasDrawAction.EnableDrawing -> _canvasDrawUiState.update { state ->
+                state.copy(
+                    topBarUiState = state.topBarUiState.copy(drawingEnabled = !state.topBarUiState.drawingEnabled),
+                    drawActionButtonsUiState = state.drawActionButtonsUiState.copy(
+                        showActionButtonsOption = false
+                    )
                 )
             }
 
             is CanvasDrawAction.OnTitleChange -> {
                 markDirty()
-                _canvasDrawUiState.update { it.copy(canvasTitle = action.title) }
+                _canvasDrawUiState.update { state ->
+                    state.copy(
+                        topBarUiState = state.topBarUiState.copy(
+                            canvasTitle = action.title
+                        )
+                    )
+                }
             }
 
-            is CanvasDrawAction.ShowStrokeOptions -> _canvasDrawUiState.update {
-                it.copy(
-                    showStrokeOptions = action.showStrokeOptions
+            is CanvasDrawAction.ShowStrokeOptions -> _canvasDrawUiState.update { state ->
+                state.copy(
+                    drawActionButtonsUiState = state.drawActionButtonsUiState.copy(
+                        showStrokeOptions = action.showStrokeOptions
+                    )
                 )
             }
 
             is CanvasDrawAction.ShowActionButtonsOption -> _canvasDrawUiState.update { state ->
                 if (action.showActionButtonsOption) {
-                    previousDrawingEnabled = state.drawingEnabled
-                    state.copy(showActionButtonsOption = true, drawingEnabled = false)
+                    previousDrawingEnabled = state.topBarUiState.drawingEnabled
+                    state.copy(
+                        drawActionButtonsUiState = state.drawActionButtonsUiState.copy(
+                            showActionButtonsOption = true
+                        ),
+                        topBarUiState = state.topBarUiState.copy(drawingEnabled = false)
+                    )
                 } else {
                     val restoredState = state.copy(
-                        showActionButtonsOption = false,
-                        drawingEnabled = previousDrawingEnabled ?: state.drawingEnabled
+                        drawActionButtonsUiState = state.drawActionButtonsUiState.copy(
+                            showActionButtonsOption = false
+                        ),
+                        topBarUiState = state.topBarUiState.copy(
+                            drawingEnabled = previousDrawingEnabled
+                                ?: state.topBarUiState.drawingEnabled
+                        ),
                     )
                     previousDrawingEnabled = null
                     restoredState
                 }
             }
 
-            is CanvasDrawAction.UpdateOffsetFraction -> _canvasDrawUiState.update {
-                it.copy(viewportUiState = it.viewportUiState.copy(offsetFraction = action.offset))
+            is CanvasDrawAction.UpdateOffsetFraction -> _canvasDrawUiState.update { state ->
+                state.copy(viewportUiState = state.viewportUiState.copy(offsetFraction = action.offset))
             }
 
             is CanvasDrawAction.UpdateStrokes -> {
-                _canvasDrawUiState.update {
-                    it.copy(
-                        canvasDrawing = it.canvasDrawing.copy(canvasStrokes = it.canvasDrawing.canvasStrokes + action.canvasStroke),
-                        redoStrokes = emptyList()
+                _canvasDrawUiState.update { state ->
+                    state.copy(
+                        canvasContentState = state.canvasContentState.copy(
+                            canvasDrawing = state.canvasContentState.canvasDrawing.copy(
+                                canvasStrokes = state.canvasContentState.canvasDrawing.canvasStrokes + action.canvasStroke
+                            ),
+                            redoStrokes = emptyList()
+                        ),
                     )
                 }
 
@@ -188,30 +224,38 @@ class CanvasDrawViewModel @Inject constructor(
             }
 
             is CanvasDrawAction.CancelLastStroke -> {
-                val canvasStrokes = _canvasDrawUiState.value.canvasDrawing.canvasStrokes
+                val canvasStrokes =
+                    _canvasDrawUiState.value.canvasContentState.canvasDrawing.canvasStrokes
                 val lastMovedStrokeIndex = canvasStrokes.indexOfLast { it.penType == PEN.MOVE }
 
                 val newStrokes = canvasStrokes.subList(0, lastMovedStrokeIndex)
-                _canvasDrawUiState.update {
-                    it.copy(
-                        canvasDrawing = it.canvasDrawing.copy(
-                            canvasStrokes = newStrokes
+                _canvasDrawUiState.update { state ->
+                    state.copy(
+                        canvasContentState = state.canvasContentState.copy(
+                            canvasDrawing = state.canvasContentState.canvasDrawing.copy(
+                                canvasStrokes = newStrokes
+                            )
                         )
                     )
                 }
             }
 
             is CanvasDrawAction.UndoDrawing -> {
-                val strokes = _canvasDrawUiState.value.canvasDrawing.canvasStrokes
+                val strokes =
+                    _canvasDrawUiState.value.canvasContentState.canvasDrawing.canvasStrokes
                 val grouped = groupStrokes(strokes)
                 if (grouped.isEmpty()) return
                 val lastStroke = listOf(grouped.last())
                 val remaining = grouped.dropLast(1).flatten()
 
-                _canvasDrawUiState.update {
-                    it.copy(
-                        canvasDrawing = it.canvasDrawing.copy(canvasStrokes = remaining),
-                        redoStrokes = it.redoStrokes + lastStroke
+                _canvasDrawUiState.update { state ->
+                    state.copy(
+                        canvasContentState = state.canvasContentState.copy(
+                            canvasDrawing = state.canvasContentState.canvasDrawing.copy(
+                                canvasStrokes = remaining
+                            ),
+                            redoStrokes = state.canvasContentState.redoStrokes + lastStroke
+                        )
                     )
                 }
 
@@ -220,15 +264,19 @@ class CanvasDrawViewModel @Inject constructor(
             }
 
             is CanvasDrawAction.RedoDrawing -> {
-                val redoStack = _canvasDrawUiState.value.redoStrokes
+                val redoStack = _canvasDrawUiState.value.canvasContentState.redoStrokes
                 if (redoStack.isEmpty()) return
                 val strokeToRestore = redoStack.last()
                 val remainingRedo = redoStack.dropLast(1)
 
-                _canvasDrawUiState.update {
-                    it.copy(
-                        canvasDrawing = it.canvasDrawing.copy(canvasStrokes = it.canvasDrawing.canvasStrokes + strokeToRestore),
-                        redoStrokes = remainingRedo
+                _canvasDrawUiState.update { state ->
+                    state.copy(
+                        canvasContentState = state.canvasContentState.copy(
+                            canvasDrawing = state.canvasContentState.canvasDrawing.copy(
+                                canvasStrokes = state.canvasContentState.canvasDrawing.canvasStrokes + strokeToRestore
+                            ),
+                            redoStrokes = remainingRedo
+                        )
                     )
                 }
 
@@ -237,8 +285,14 @@ class CanvasDrawViewModel @Inject constructor(
             }
 
             is CanvasDrawAction.ClearDrawing -> {
-                _canvasDrawUiState.update {
-                    it.copy(canvasDrawing = it.canvasDrawing.copy(canvasStrokes = emptyList()))
+                _canvasDrawUiState.update { state ->
+                    state.copy(
+                        canvasContentState = state.canvasContentState.copy(
+                            canvasDrawing = state.canvasContentState.canvasDrawing.copy(
+                                canvasStrokes = emptyList()
+                            )
+                        )
+                    )
                 }
 
                 markDirty()
@@ -250,6 +304,25 @@ class CanvasDrawViewModel @Inject constructor(
                 viewModelScope.launch {
                     saveCanvasImmediately()
                     eventChannel.send(CanvasDrawEvent.NavigateBack)
+                }
+            }
+
+            is CanvasDrawAction.Replay -> {
+                _canvasDrawUiState.update { state ->
+                    state.copy(
+                        replayUiState = state.replayUiState.copy(replayState = action.replayState)
+                    )
+                }
+            }
+
+            is CanvasDrawAction.RestartReplay -> {
+                _canvasDrawUiState.update { state ->
+                    state.copy(
+                        replayUiState = state.replayUiState.copy(
+                            replayState = ReplayState.PLAYING,
+                            replayTrigger = state.replayUiState.replayTrigger + 1
+                        )
+                    )
                 }
             }
         }
@@ -277,7 +350,7 @@ class CanvasDrawViewModel @Inject constructor(
         }
 
         val state = _canvasDrawUiState.value
-        val canvas = state.canvasDrawing
+        val canvas = state.canvasContentState.canvasDrawing
 
         Log.d("CanvasSave", "CanvasStrokes: ${canvas.canvasStrokes}")
 
@@ -298,13 +371,14 @@ class CanvasDrawViewModel @Inject constructor(
             return
         }
 
-        val inputTitle = state.canvasTitle.text
+        val inputTitle = state.topBarUiState.canvasTitle.text
 
         val (finalTitle, autoIndex) = when {
             canvas.id == null && inputTitle.isBlank() -> {
                 val (title, autoTitleIndex) = generateScribbleTitleUseCase()
                 title to autoTitleIndex
             }
+
             canvas.autoTitleIndex != null -> {
                 if (inputTitle.isBlank()) {
                     canvas.title to canvas.autoTitleIndex
@@ -314,6 +388,7 @@ class CanvasDrawViewModel @Inject constructor(
                     inputTitle to null
                 }
             }
+
             else -> {
                 if (inputTitle.isBlank())
                     canvas.title to null
@@ -336,11 +411,13 @@ class CanvasDrawViewModel @Inject constructor(
                     Log.d("CanvasSave", "Result: ${result.data}")
                     _canvasDrawUiState.update { state ->
                         state.copy(
-                            canvasDrawing = state.canvasDrawing.copy(
-                                id = result.data.id,
-                                title = result.data.title,
-                                autoTitleIndex = result.data.autoIndex,
-                                thumbnailPath = result.data.thumbnailPath
+                            canvasContentState = state.canvasContentState.copy(
+                                canvasDrawing = state.canvasContentState.canvasDrawing.copy(
+                                    id = result.data.id,
+                                    title = result.data.title,
+                                    autoTitleIndex = result.data.autoIndex,
+                                    thumbnailPath = result.data.thumbnailPath
+                                )
                             )
                         )
                     }
@@ -365,7 +442,7 @@ class CanvasDrawViewModel @Inject constructor(
     }
 
     private fun onPageColorChanged(newPageColor: Color): Pair<List<CanvasStroke>, Color> {
-        val fixStrokes = _canvasDrawUiState.value.canvasDrawing.canvasStrokes.map { stroke ->
+        val fixStrokes = _canvasDrawUiState.value.canvasContentState.canvasDrawing.canvasStrokes.map { stroke ->
             when {
                 newPageColor == Color.Black && stroke.colorArgb == Color.Black.toArgb() -> stroke.copy(
                     colorArgb = Color.White.toArgb()
@@ -378,9 +455,9 @@ class CanvasDrawViewModel @Inject constructor(
                 else -> stroke
             }
         }
-        val fixBrushColor = if (_canvasDrawUiState.value.strokeColor == newPageColor) {
+        val fixBrushColor = if (_canvasDrawUiState.value.canvasContentState.strokeColor == newPageColor) {
             if (newPageColor == Color.Black) Color.White else Color.Black
-        } else _canvasDrawUiState.value.strokeColor
+        } else _canvasDrawUiState.value.canvasContentState.strokeColor
 
         return fixStrokes to fixBrushColor
     }

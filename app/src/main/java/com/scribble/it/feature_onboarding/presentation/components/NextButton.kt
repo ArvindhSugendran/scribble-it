@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
-import com.scribble.it.ui.theme.Graphite90
+import com.scribble.it.ui.theme.AmberGraphite90
 
 @Composable
 fun NextButton(
@@ -28,7 +28,7 @@ fun NextButton(
         modifier = modifier,
         shape = MaterialTheme.shapes.small,
         colors = ButtonDefaults.filledTonalButtonColors(
-            containerColor = Graphite90.copy(alpha = 0.3f),
+            containerColor = AmberGraphite90.copy(alpha = 0.3f),
             contentColor = Color.White
         )
     ) {

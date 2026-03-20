@@ -6,6 +6,7 @@ import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Share
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.scribble.it.feature_canvas.domain.repository.CanvasRepository
 import com.scribble.it.feature_onboarding.domain.model.OnboardingPage
 import com.scribble.it.feature_onboarding.presentation.action.OnboardingAction
 import com.scribble.it.feature_onboarding.presentation.event.OnboardingEvent
@@ -26,6 +27,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
+    private val canvasRepository: CanvasRepository
 ) : ViewModel() {
 
     private val onboardingPages = listOf(
@@ -74,26 +76,32 @@ class OnboardingViewModel @Inject constructor(
     }
 
     private fun onPageChanged(page: Int) {
-        _onBoardingUiState.update { state->
+        _onBoardingUiState.update { state ->
             state.copy(currentPage = page)
         }
     }
 
     private fun onNextClicked() {
-        _onBoardingUiState.update { state->
+        _onBoardingUiState.update { state ->
             state.copy(currentPage = state.currentPage + 1)
         }
     }
 
     private fun onGetStartedClicked() {
         viewModelScope.launch {
+            setOnBoardingCompleted()
             eventChannel.send(OnboardingEvent.NavigateToHome)
         }
     }
 
     private fun onSkipClicked() {
         viewModelScope.launch {
+            setOnBoardingCompleted()
             eventChannel.send(OnboardingEvent.NavigateToHome)
         }
+    }
+
+    private suspend fun setOnBoardingCompleted() {
+        canvasRepository.setOnBoardingCompleted()
     }
 }

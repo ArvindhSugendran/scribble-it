@@ -88,7 +88,7 @@ class CanvasRecycleViewModel @Inject constructor(
 
     private fun loadCanvasViewMode() {
         viewModelScope.launch {
-            canvasRepository.getCanvasViewMode()
+            canvasRepository.getScribbleViewMode()
                 .collectLatest { mode ->
                     _canvasRecycleUiState.update { state ->
                         state.copy(canvasViewMode = mode)

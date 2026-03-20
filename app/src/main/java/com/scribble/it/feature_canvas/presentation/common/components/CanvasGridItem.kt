@@ -64,6 +64,7 @@ fun CanvasGridItem(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.secondaryContainer)
             .then(border)
             .combinedClickable(
                 onClick = {
@@ -98,7 +99,7 @@ fun CanvasGridItem(
 
             Text(
                 text = canvasSummary.title,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
                 style = itemMetrics.titleTextStyle,
                 fontWeight = FontWeight.Bold,
                 overflow = TextOverflow.Ellipsis,
@@ -109,7 +110,7 @@ fun CanvasGridItem(
             Text(
                 text = canvasSummary.createdDate.toDateString(),
                 style = itemMetrics.dateTextStyle,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
                 overflow = TextOverflow.Ellipsis,
                 maxLines = 1,
                 modifier = Modifier

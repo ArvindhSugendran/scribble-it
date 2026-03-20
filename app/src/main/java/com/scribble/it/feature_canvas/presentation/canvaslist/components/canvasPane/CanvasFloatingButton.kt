@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,7 +35,7 @@ fun CanvasFloatingButton(
         shape = RoundedCornerShape(12.dp),
         icon = {
             Icon(
-                imageVector = Icons.Default.Add,
+                imageVector = Icons.Default.Edit,
                 contentDescription = "Create Canvas"
             )
         },
@@ -49,8 +49,8 @@ fun CanvasFloatingButton(
                 letterSpacing = 1.sp
             )
         },
-        containerColor = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary,
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
     )
 }
 

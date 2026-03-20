@@ -17,6 +17,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
+import com.scribble.it.feature_canvas.presentation.canvasdraw.state.ReplayState
 import com.scribble.it.feature_canvas.presentation.canvasdraw.state.ViewportTransform
 import com.scribble.it.feature_canvas.presentation.canvasdraw.ui.adaptive.metrics.CanvasViewportMetrics
 
@@ -26,6 +28,7 @@ fun CanvasViewport(
     maxWidth: Dp,
     maxHeight: Dp,
     offsetFraction: Offset,
+    replayState: ReplayState,
     metrics: CanvasViewportMetrics,
     onOffsetFractionChange: (Offset) -> Unit,
     content: @Composable (ViewportTransform) -> Unit
@@ -33,6 +36,9 @@ fun CanvasViewport(
     val density = LocalDensity.current
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
+
+    val drawActionButtonOverlayWidth = 26.dp
+    val drawActionOverlayPx = with(density) { drawActionButtonOverlayWidth.toPx() }
 
     val viewportWidthPx = with(density) { metrics.viewportWidth.toPx() }
     val viewportHeightPx = with(density) { metrics.viewportHeight.toPx() }
@@ -47,20 +53,28 @@ fun CanvasViewport(
         )
     }
 
-    LaunchedEffect(metrics) {
-        scale = metrics.scale
-        offset = if (offsetFraction != Offset.Zero) {
-            Offset(
-                x = offsetFraction.x * maxOffsetPx.x,
-                y = offsetFraction.y * maxOffsetPx.y
-            )
-        } else {
-            maxOffsetPx
+    LaunchedEffect(replayState) {
+        if (replayState != ReplayState.IDLE) {
+            scale = 1f
+            offset = Offset.Zero
         }
+    }
 
-        Log.d(
-            "TRANSFORM_DETAILS_INITIAL",
-            """
+    LaunchedEffect(metrics) {
+        if(replayState == ReplayState.IDLE) {
+            scale = metrics.scale
+            offset = if (offsetFraction != Offset.Zero) {
+                Offset(
+                    x = offsetFraction.x * maxOffsetPx.x,
+                    y = offsetFraction.y * maxOffsetPx.y
+                )
+            } else {
+                maxOffsetPx
+            }
+
+            Log.d(
+                "TRANSFORM_DETAILS_INITIAL",
+                """
                 Scale = $scale
                 Offset = $offset
                 OffsetFraction = $offsetFraction
@@ -69,7 +83,8 @@ fun CanvasViewport(
                 ViewPortWidth = ${metrics.viewportWidth}
                 ViewportHeight = ${metrics.viewportHeight}
             """.trimIndent()
-        )
+            )
+        }
     }
 
     val transformState = rememberTransformableState { zoomChange, panChange, _ ->
@@ -84,8 +99,10 @@ fun CanvasViewport(
         val maxX = overflowX / 2f
         val maxY = overflowY / 2f
 
+        val coerceMaxX = if(maxX > 0) -maxX - drawActionOverlayPx else maxX
+
         offset = Offset(
-            x = (offset.x + nextScale * panChange.x).coerceIn(-maxX, maxX),
+            x = (offset.x + nextScale * panChange.x).coerceIn(coerceMaxX, maxX),
             y = (offset.y + nextScale * panChange.y).coerceIn(-maxY, maxY)
         )
         onOffsetFractionChange(
@@ -96,6 +113,7 @@ fun CanvasViewport(
         )
 
         scale = nextScale
+
         Log.d(
             "TRANSFORM_DETAILS_IN",
             "Scale = $scale : Offset = $offset : OffsetFraction = ${offsetFraction}}"

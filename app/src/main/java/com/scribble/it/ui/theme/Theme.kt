@@ -1,13 +1,17 @@
 package com.scribble.it.ui.theme
 
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
 
@@ -37,19 +41,19 @@ private val DarkColorScheme = darkColorScheme(
     onErrorContainer = Red90,
 
     // Background & Surfaces — Warm Graphite
-    background = Graphite10,
-    onBackground = Graphite90,
+    background = AmberGraphite10,
+    onBackground = AmberGraphite90,
 
-    surface = Graphite10,
-    onSurface = Graphite90,
+    surface = AmberGraphite10,
+    onSurface = AmberGraphite90,
 
-    surfaceVariant = Graphite20,
-    onSurfaceVariant = Graphite80,
+    surfaceVariant = AmberGraphite30,
+    onSurfaceVariant = AmberGraphite80,
 
-    outline = Graphite60,
+    outline = AmberGraphite60,
 
-    inverseSurface = Graphite90,
-    inverseOnSurface = Graphite20
+    inverseSurface = AmberGraphite90,
+    inverseOnSurface = AmberGraphite20
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -80,19 +84,19 @@ private val LightColorScheme = lightColorScheme(
     onErrorContainer = Red10,
 
     // Background & Surfaces — Warm Graphite
-    background = Graphite99,
-    onBackground = Graphite10,
+    background = AmberGraphite99,
+    onBackground = AmberGraphite10,
 
-    surface = Graphite99,
-    onSurface = Graphite10,
+    surface = AmberGraphite99,
+    onSurface = AmberGraphite10,
 
-    surfaceVariant = Graphite90,
-    onSurfaceVariant = Graphite30,
+    surfaceVariant = AmberGraphite90,
+    onSurfaceVariant = AmberGraphite30,
 
-    outline = Graphite50,
+    outline = AmberGraphite50,
 
-    inverseSurface = Graphite20,
-    inverseOnSurface = Graphite95
+    inverseSurface = AmberGraphite20,
+    inverseOnSurface = AmberGraphite95
 )
 
 val LightScribbleColors = ScribbleColors(
@@ -103,7 +107,6 @@ val LightScribbleColors = ScribbleColors(
 val DarkScribbleColors = ScribbleColors(
     canvasDrawIconBackground = Color(0xFF3A2F1E),
     canvasDrawActionButtonRipple = Color(0xFFE6D3B1).copy(alpha = 0.18f)
-
 )
 
 val LocalScribbleColors = staticCompositionLocalOf {
@@ -119,9 +122,15 @@ object ScribbleTheme {
 @Composable
 fun ScribbleTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            val context = LocalContext.current
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        }
+
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
