@@ -20,6 +20,7 @@ sealed class CanvasListAction {
 
     // Refresh Action
     data object RefreshData: CanvasListAction()
+    data object OnLoadingCompleted: CanvasListAction()
 
     // List Actions
     data class CanvasItemInteractionAction(val interaction: CanvasItemInteraction): CanvasListAction()

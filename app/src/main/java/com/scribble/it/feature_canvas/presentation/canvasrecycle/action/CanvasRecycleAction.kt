@@ -6,6 +6,7 @@ import com.scribble.it.feature_canvas.presentation.common.action.CanvasItemInter
 sealed class CanvasRecycleAction {
     data object CloseDeleteBar: CanvasRecycleAction()
     data object RefreshData: CanvasRecycleAction()
+    data object OnLoadingCompleted: CanvasRecycleAction()
 
     data class CanvasItemInteractionAction(val interaction: CanvasItemInteraction): CanvasRecycleAction()
     data class SelectAllCanvases(val targetIds: Set<Long>): CanvasRecycleAction()

@@ -107,6 +107,8 @@ class CanvasDrawViewModel @Inject constructor(
                                         )
                                     )
                                 }
+
+                                lastSavedVersion = contentVersion
                             }
                         }
                     }
@@ -208,10 +210,14 @@ class CanvasDrawViewModel @Inject constructor(
             }
 
             is CanvasDrawAction.UpdateStrokes -> {
+                val currentState = _canvasDrawUiState.value
+                val currentCanvas = currentState.canvasContentState.canvasDrawing
+
                 _canvasDrawUiState.update { state ->
                     state.copy(
                         canvasContentState = state.canvasContentState.copy(
                             canvasDrawing = state.canvasContentState.canvasDrawing.copy(
+                                id = currentCanvas.id ?: System.currentTimeMillis(),
                                 canvasStrokes = state.canvasContentState.canvasDrawing.canvasStrokes + action.canvasStroke
                             ),
                             redoStrokes = emptyList()
@@ -374,7 +380,7 @@ class CanvasDrawViewModel @Inject constructor(
         val inputTitle = state.topBarUiState.canvasTitle.text
 
         val (finalTitle, autoIndex) = when {
-            canvas.id == null && inputTitle.isBlank() -> {
+            canvas.autoTitleIndex == null && inputTitle.isBlank() -> {
                 val (title, autoTitleIndex) = generateScribbleTitleUseCase()
                 title to autoTitleIndex
             }
@@ -400,6 +406,8 @@ class CanvasDrawViewModel @Inject constructor(
         Log.d("CanvasSave", "AutoIndex: $autoIndex")
 
         val updatedCanvas = canvas.copy(title = finalTitle, autoTitleIndex = autoIndex)
+
+        Log.d("CanvasSave", "UpdatedFinalCanvasBeforeSave: $updatedCanvas")
 
         saveCanvasUseCase(updatedCanvas).collectLatest { result ->
             when (result) {

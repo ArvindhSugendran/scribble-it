@@ -3,11 +3,7 @@ package com.scribble.it.feature_canvas.presentation.canvaslist.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
 import androidx.paging.PagingData
-import androidx.paging.PagingSource
-import androidx.paging.PagingState
 import androidx.paging.cachedIn
 import com.scribble.it.feature_canvas.domain.error.CanvasError
 import com.scribble.it.feature_canvas.domain.model.canvasSummary.CanvasSummary
@@ -75,6 +71,7 @@ class CanvasListViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val basePagingFlow: Flow<PagingData<CanvasSummary>> =
         refreshTrigger
+            .onStart { emit(Unit) }
             .flatMapLatest {
                 sortFlow
                     .flatMapLatest { sortOption ->
@@ -87,23 +84,6 @@ class CanvasListViewModel @Inject constructor(
                     }
             }
             .cachedIn(viewModelScope)
-
-//        refreshTrigger.onStart { emit(Unit) }
-//            .flatMapLatest {
-//                Pager(PagingConfig(pageSize = 1)) {
-//                    object : PagingSource<Int, CanvasSummary>() {
-//                        override suspend fun load(params: LoadParams<Int>): LoadResult<Int, CanvasSummary> {
-//                            return LoadResult.Page(
-//                                data = emptyList(),
-//                                prevKey = null,
-//                                nextKey = null
-//                            )
-//                        }
-//
-//                        override fun getRefreshKey(state: PagingState<Int, CanvasSummary>) = null
-//                    }
-//                }.flow
-//            }
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     val searchPagingFlow: Flow<PagingData<CanvasSummary>> =
@@ -125,6 +105,10 @@ class CanvasListViewModel @Inject constructor(
             .cachedIn(viewModelScope)
 
     init {
+        loadScribbleViewMode()
+    }
+
+    private fun loadScribbleViewMode() {
         viewModelScope.launch {
 
             val viewMode = canvasRepository.getScribbleViewMode().first()
@@ -136,27 +120,6 @@ class CanvasListViewModel @Inject constructor(
                     list = state.list.copy(isInitialLoading = true, canvasViewMode = viewMode)
                 )
             }
-
-            launch {
-                // Wait until first Paging load completes
-                basePagingFlow.collectLatest {
-                    // When Paging emits data, hide initial loading
-                    Log.d("PAGING_DATA", basePagingFlow.toString())
-
-                    delay(2000)
-
-                    _canvasListUiState.update { state ->
-                        state.copy(
-                            list = state.list.copy(
-                                isInitialLoading = false,
-                                isRefreshing = false
-                            )
-                        )
-                    }
-                }
-            }
-
-            refreshTrigger.emit(Unit)
         }
     }
 
@@ -512,6 +475,20 @@ class CanvasListViewModel @Inject constructor(
                             )
                         )
                     )
+                }
+            }
+
+            is CanvasListAction.OnLoadingCompleted -> {
+                viewModelScope.launch {
+                    delay(2000)
+                    _canvasListUiState.update { state ->
+                        state.copy(
+                            list = state.list.copy(
+                                isInitialLoading = false,
+                                isRefreshing = false
+                            )
+                        )
+                    }
                 }
             }
         }

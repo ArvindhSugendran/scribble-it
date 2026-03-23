@@ -289,23 +289,18 @@ fun PaperSurface(
     }
 }
 
-private fun DrawScope.drawNormalizedPathCached(
-    cache: StrokeCache,
-) {
-    cache.segments.forEach { segment ->
-        drawPath(
-            path = segment.path,
-            color = Color(segment.colorArgb),
-            style = Stroke(width = segment.brushNormalized * size.width)
-        )
-    }
-    cache.dots.forEach { dot ->
-        drawCircle(
-            radius = dot.radius * size.width,
-            center = dot.offset,
-            color = Color(dot.colorArgb),
-            style = Fill
-        )
+@Composable
+fun rememberStrokeCache(
+    strokes: List<CanvasStroke>,
+    canvasWidth: Float,
+    canvasHeight: Float
+): StrokeCache {
+
+    val scaleX = canvasWidth / CanvasConstants.PAGE_WIDTH
+    val scaleY = canvasHeight / CanvasConstants.PAGE_HEIGHT
+
+    return remember(strokes, scaleX, scaleY) {
+        buildStrokeCache(strokes, scaleX, scaleY)
     }
 }
 
@@ -386,18 +381,23 @@ private fun buildStrokeCache(
     return StrokeCache(segments, dots, totalSegments = strokes.size - 1)
 }
 
-@Composable
-fun rememberStrokeCache(
-    strokes: List<CanvasStroke>,
-    canvasWidth: Float,
-    canvasHeight: Float
-): StrokeCache {
-
-    val scaleX = canvasWidth / CanvasConstants.PAGE_WIDTH
-    val scaleY = canvasHeight / CanvasConstants.PAGE_HEIGHT
-
-    return remember(strokes, scaleX, scaleY) {
-        buildStrokeCache(strokes, scaleX, scaleY)
+private fun DrawScope.drawNormalizedPathCached(
+    cache: StrokeCache,
+) {
+    cache.segments.forEach { segment ->
+        drawPath(
+            path = segment.path,
+            color = Color(segment.colorArgb),
+            style = Stroke(width = segment.brushNormalized * size.width)
+        )
+    }
+    cache.dots.forEach { dot ->
+        drawCircle(
+            radius = dot.radius * size.width,
+            center = dot.offset,
+            color = Color(dot.colorArgb),
+            style = Fill
+        )
     }
 }
 

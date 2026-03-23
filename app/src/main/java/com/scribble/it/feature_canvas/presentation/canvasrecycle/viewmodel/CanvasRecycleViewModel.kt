@@ -73,17 +73,6 @@ class CanvasRecycleViewModel @Inject constructor(
 
     init {
         loadCanvasViewMode()
-
-        _canvasRecycleUiState.update { it.copy(isInitialLoading = true) }
-        viewModelScope.launch {
-            // Wait until first Paging load completes
-            recyclePagingFlow.collectLatest {
-                delay(2000)
-                _canvasRecycleUiState.update { state ->
-                    state.copy(isInitialLoading = false, isRefreshing = false)
-                }
-            }
-        }
     }
 
     private fun loadCanvasViewMode() {
@@ -97,21 +86,29 @@ class CanvasRecycleViewModel @Inject constructor(
         }
     }
 
-
     fun viewAction(action: CanvasRecycleAction) {
         when (action) {
 
             is CanvasRecycleAction.CanvasItemInteractionAction -> {
                 val interaction = action.interaction
-                when(interaction.clickType) {
+                when (interaction.clickType) {
                     CanvasItemClickType.CLICK -> {
                         val topBarMode = _canvasRecycleUiState.value.topBarMode
                         if (topBarMode == TopBarMode.DELETE) {
-                            toggleSelectedItems(id = interaction.selectedId, availableItemIds = interaction.availableItemIds)
-                        } else { Unit }
+                            toggleSelectedItems(
+                                id = interaction.selectedId,
+                                availableItemIds = interaction.availableItemIds
+                            )
+                        } else {
+                            Unit
+                        }
                     }
+
                     CanvasItemClickType.LONG_CLICK -> {
-                        toggleSelectedItems(id = interaction.selectedId, availableItemIds = interaction.availableItemIds)
+                        toggleSelectedItems(
+                            id = interaction.selectedId,
+                            availableItemIds = interaction.availableItemIds
+                        )
                     }
                 }
             }
@@ -159,7 +156,7 @@ class CanvasRecycleViewModel @Inject constructor(
             }
 
             is CanvasRecycleAction.Bulk -> {
-                when(val event = action.event) {
+                when (val event = action.event) {
                     is BulkActionEvent.Confirm -> {
                         val dialog = _canvasRecycleUiState.value.dialogState
 
@@ -172,9 +169,24 @@ class CanvasRecycleViewModel @Inject constructor(
                                         deleteRequest = DeleteRequest.CanvasesById(targetIds)
                                     ).collectLatest { result: Result<DeleteUseCaseResult, CanvasError> ->
                                         when (result) {
-                                            is Result.Error -> Log.d("CanvasDelete", result.error.toString())
+                                            is Result.Error -> Log.d(
+                                                "CanvasDelete",
+                                                result.error.toString()
+                                            )
+
                                             is Result.Loading -> Log.d("CanvasDelete", "LOADING")
-                                            is Result.Success -> Log.d("CanvasDelete", "Deleted Successfully")
+                                            is Result.Success -> {
+                                                Log.d(
+                                                    "CanvasDelete",
+                                                    "Deleted Successfully"
+                                                )
+                                                _canvasRecycleUiState.update { state ->
+                                                    state.copy(
+                                                        topBarMode = TopBarMode.DEFAULT,
+                                                        selectedIds = emptySet()
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
 
@@ -184,7 +196,11 @@ class CanvasRecycleViewModel @Inject constructor(
                                         archiveAction = ArchiveAction.RESTORE
                                     ).collectLatest { result: Result<ArchiveUseCaseResult, CanvasError> ->
                                         when (result) {
-                                            is Result.Error -> Log.d("CanvasArchive", result.error.toString())
+                                            is Result.Error -> Log.d(
+                                                "CanvasArchive",
+                                                result.error.toString()
+                                            )
+
                                             is Result.Loading -> Log.d("CanvasArchive", "LOADING")
                                             is Result.Success -> {
                                                 Log.d("CanvasArchive", "Result: ${result.data}")
@@ -224,7 +240,7 @@ class CanvasRecycleViewModel @Inject constructor(
                             else -> return
                         }
 
-                        if(event.targetIds.isNotEmpty()) {
+                        if (event.targetIds.isNotEmpty()) {
                             _canvasRecycleUiState.update {
                                 it.copy(
                                     dialogState = ConfirmationDialogState(
@@ -237,6 +253,18 @@ class CanvasRecycleViewModel @Inject constructor(
                                 )
                             }
                         }
+                    }
+                }
+            }
+
+            is CanvasRecycleAction.OnLoadingCompleted -> {
+                viewModelScope.launch {
+                    delay(2000)
+                    _canvasRecycleUiState.update { state ->
+                        state.copy(
+                            isInitialLoading = false,
+                            isRefreshing = false
+                        )
                     }
                 }
             }

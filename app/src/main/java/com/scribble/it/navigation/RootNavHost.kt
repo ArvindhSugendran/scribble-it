@@ -48,12 +48,12 @@ fun RootNavHost(
                     .background(MaterialTheme.colorScheme.background),
                 onNavigateToCanvasScreen = {
                     navController.navigate(CanvasListRoute) {
-                        popUpTo(GateRoute) {inclusive = true}
+                        popUpTo(GateRoute) { inclusive = true }
                     }
                 },
                 onNavigateToOnboardingScreen = {
                     navController.navigate(OnboardingRoute) {
-                        popUpTo(GateRoute) {inclusive = true}
+                        popUpTo(GateRoute) { inclusive = true }
                     }
                 }
             )
@@ -76,17 +76,16 @@ fun RootNavHost(
             )
         }
 
-        composable(
-            route = CanvasListRoute::class,
+        composable<CanvasListRoute>(
             exitTransition = {
-                if (targetState.destination.route == CanvasRecycleRoute::class.qualifiedName) {
+                if (targetState.destination.route?.contains("CanvasRecycleRoute") == true) {
                     ExitTransition.None
                 } else {
                     slideOutHorizontally { -it }
                 }
             },
             popEnterTransition = {
-                if (initialState.destination.route == CanvasRecycleRoute::class.qualifiedName) {
+                if (initialState.destination.route?.contains("CanvasRecycleRoute") == true) {
                     EnterTransition.None
                 } else {
                     slideInHorizontally { -it }
@@ -118,8 +117,7 @@ fun RootNavHost(
             )
         }
 
-        composable(
-            route = CanvasDrawRoute::class,
+        composable<CanvasDrawRoute>(
             enterTransition = { slideInHorizontally { it } },
             popExitTransition = { slideOutHorizontally { it } }
         ) {
@@ -140,8 +138,7 @@ fun RootNavHost(
             )
         }
 
-        composable(
-            route = CanvasRecycleRoute::class,
+        composable<CanvasRecycleRoute>(
             enterTransition = { slideInVertically { it } },
             popExitTransition = { slideOutVertically { it } }
         ) {

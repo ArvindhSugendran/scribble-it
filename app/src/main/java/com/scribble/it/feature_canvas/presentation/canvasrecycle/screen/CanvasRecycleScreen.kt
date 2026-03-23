@@ -47,6 +47,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.innerShadow
@@ -79,6 +80,7 @@ import com.scribble.it.feature_canvas.presentation.common.action.CanvasItemInter
 import com.scribble.it.feature_canvas.presentation.common.components.CanvasAppBar
 import com.scribble.it.feature_canvas.presentation.common.components.CanvasDeleteBar
 import com.scribble.it.feature_canvas.presentation.common.components.CanvasList
+import com.scribble.it.feature_canvas.presentation.common.components.CanvasShimmer
 import com.scribble.it.feature_canvas.presentation.common.components.ConfirmationDialog
 import com.scribble.it.feature_canvas.presentation.common.state.CanvasViewMode
 import com.scribble.it.feature_canvas.presentation.common.state.CanvasViewModeConfig
@@ -91,6 +93,7 @@ import com.scribble.it.ui.adaptive.scale.ScreenScale
 import com.scribble.it.ui.adaptive.scale.WidthClass
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Composable
 fun CanvasRecycleScreen(
@@ -137,6 +140,22 @@ fun CanvasRecycleScreen(
             eventsFlow.collectLatest {
             }
         }
+    }
+
+    LaunchedEffect(recyclePagingItems.loadState.refresh) {
+        snapshotFlow { recyclePagingItems.loadState.refresh }
+            .distinctUntilChanged()
+            .collect { stateClass ->
+                when (stateClass) {
+                    is LoadState.Loading -> {}
+
+                    is LoadState.NotLoading -> {
+                        onAction(CanvasRecycleAction.OnLoadingCompleted)
+                    }
+
+                    is LoadState.Error -> {}
+                }
+            }
     }
 
     BoxWithConstraints(
@@ -379,39 +398,42 @@ fun CanvasRecycleScreen(
                     },
                 ) {
 
-                    CanvasList(
-                        modifier = Modifier
-                            .fillMaxSize(),
-                        config = baseViewModeLayoutConfig,
-                        isLoading = uiState.isInitialLoading,
-                        isBlurred = false,
-                        items = recyclePagingItems,
-                        selectedIds = uiState.selectedIds,
-                        onClicked = { id ->
-                            onAction(
-                                CanvasRecycleAction.CanvasItemInteractionAction(
-                                    CanvasItemInteraction(
-                                        clickType = CanvasItemClickType.CLICK,
-                                        selectedId = id,
-                                        availableItemIds = recyclePagingItems.itemSnapshotList.items.mapNotNull { it.id }
-                                            .toSet()
+                    if (uiState.isInitialLoading) {
+                        CanvasShimmer(baseViewModeLayoutConfig)
+                    } else {
+                        CanvasList(
+                            modifier = Modifier
+                                .fillMaxSize(),
+                            config = baseViewModeLayoutConfig,
+                            isBlurred = false,
+                            items = recyclePagingItems,
+                            selectedIds = uiState.selectedIds,
+                            onClicked = { id ->
+                                onAction(
+                                    CanvasRecycleAction.CanvasItemInteractionAction(
+                                        CanvasItemInteraction(
+                                            clickType = CanvasItemClickType.CLICK,
+                                            selectedId = id,
+                                            availableItemIds = recyclePagingItems.itemSnapshotList.items.mapNotNull { it.id }
+                                                .toSet()
+                                        )
                                     )
                                 )
-                            )
-                        },
-                        onLongClicked = { id ->
-                            onAction(
-                                CanvasRecycleAction.CanvasItemInteractionAction(
-                                    CanvasItemInteraction(
-                                        clickType = CanvasItemClickType.LONG_CLICK,
-                                        selectedId = id,
-                                        availableItemIds = recyclePagingItems.itemSnapshotList.items.mapNotNull { it.id }
-                                            .toSet()
+                            },
+                            onLongClicked = { id ->
+                                onAction(
+                                    CanvasRecycleAction.CanvasItemInteractionAction(
+                                        CanvasItemInteraction(
+                                            clickType = CanvasItemClickType.LONG_CLICK,
+                                            selectedId = id,
+                                            availableItemIds = recyclePagingItems.itemSnapshotList.items.mapNotNull { it.id }
+                                                .toSet()
+                                        )
                                     )
                                 )
-                            )
-                        },
-                    )
+                            },
+                        )
+                    }
 
                     ConfirmationDialog(
                         state = uiState.dialogState,

@@ -80,6 +80,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -151,6 +152,7 @@ import com.scribble.it.feature_canvas.presentation.common.action.BulkActionEvent
 import com.scribble.it.feature_canvas.presentation.common.action.BulkRecycleActionType
 import com.scribble.it.feature_canvas.presentation.common.action.CanvasItemClickType
 import com.scribble.it.feature_canvas.presentation.common.action.CanvasItemInteraction
+import com.scribble.it.feature_canvas.presentation.common.components.CanvasShimmer
 import com.scribble.it.feature_canvas.presentation.common.components.ConfirmationDialog
 import com.scribble.it.feature_canvas.presentation.common.state.CanvasViewMode
 import com.scribble.it.feature_canvas.presentation.common.state.CanvasViewModeConfig
@@ -164,6 +166,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -325,8 +329,10 @@ fun CanvasListScreen(
     }
 
     LaunchedEffect(topBarState.query.text) {
-        snapshotFlow { searchPagingItems.loadState.refresh }.map { it::class }
-            .distinctUntilChanged().collect { stateClass ->
+        snapshotFlow { searchPagingItems.loadState.refresh }
+            .map { it::class }
+            .distinctUntilChanged()
+            .collect { stateClass ->
                 when (stateClass) {
                     LoadState.Loading::class -> {
                         searchCycleStarted = true
@@ -356,19 +362,44 @@ fun CanvasListScreen(
     }
 
     LaunchedEffect(basePagingItems.loadState.refresh) {
-        if (basePagingItems.loadState.refresh is LoadState.NotLoading && listState.shouldScrollToTop) {
-            when (listState.canvasViewMode) {
-                CanvasViewMode.LIST -> canvasListState.animateScrollToItem(0)
-                CanvasViewMode.GRID -> canvasGridState.animateScrollToItem(0, 0)
+        snapshotFlow { basePagingItems.loadState.refresh }
+            .distinctUntilChanged()
+            .collectLatest { stateClass ->
+                when (stateClass) {
+                    is LoadState.Loading -> {}
+
+                    is LoadState.NotLoading -> {
+                        if (listState.shouldScrollToTop) {
+                            when (listState.canvasViewMode) {
+                                CanvasViewMode.LIST -> {
+                                    snapshotFlow { canvasListState.layoutInfo.totalItemsCount }
+                                        .filter { it > 0 }
+                                        .first()
+                                    withFrameNanos {  }
+                                    canvasListState.animateScrollToItem(0)
+                                }
+                                CanvasViewMode.GRID -> {
+                                    snapshotFlow { canvasGridState.layoutInfo.totalItemsCount }
+                                        .filter { it > 0 }
+                                        .first()
+                                    withFrameNanos {  }
+                                    canvasGridState.animateScrollToItem(0, 0)
+                                }
+                            }
+                            onAction(CanvasListAction.ConsumedScrollToTop)
+                        } else {
+                            onAction(CanvasListAction.OnLoadingCompleted)
+                        }
+                    }
+
+                    is LoadState.Error -> {}
+                }
             }
-            onAction(CanvasListAction.ConsumedScrollToTop)
-        }
     }
 
     var previousMode by rememberSaveable { mutableStateOf<CanvasViewMode?>(null) }
 
     LaunchedEffect(selectedIndex, listState.canvasViewMode) {
-        previousMode = listState.canvasViewMode
 
         val offsetPx = with(density) { 50.dp.roundToPx() }
         when (listState.canvasViewMode) {
@@ -392,6 +423,8 @@ fun CanvasListScreen(
                 }
             }
         }
+
+        previousMode = listState.canvasViewMode
     }
 
     LaunchedEffect(searchResultsGridState, searchResultsListState) {
@@ -553,12 +586,12 @@ fun CanvasListScreen(
                     }
                 }, provide = { metrics, content ->
                     CompositionLocalProvider(
-                        LocalCanvasMetrics provides metrics, providedPaneWidth
+                        LocalCanvasMetrics provides metrics,
+                        providedPaneWidth
                     ) {
                         content()
                     }
-                }) {
-
+                }, content = {
                     if (baseEmpty && !listState.isInitialLoading && !listState.isRefreshing) {
                         Text(
                             text = "Create your first Scribble ✏️",
@@ -641,6 +674,7 @@ fun CanvasListScreen(
                         fabScrollConnection = fabScrollConnection
                     )
                 }
+                )
             },
             secondaryPane = { (modifier, providedPaneWidth) ->
                 AdaptiveMetricsPane(modifier = modifier, buildMetrics = { scale, layout ->
@@ -655,7 +689,7 @@ fun CanvasListScreen(
                     ) {
                         content()
                     }
-                }) {
+                }, content = {
                     PreviewPane(
                         modifier = Modifier.fillMaxSize(),
                         pagingItems = basePagingItems,
@@ -667,7 +701,7 @@ fun CanvasListScreen(
                             onAction(action)
                         }
                     )
-                }
+                })
             },
         )
     }
@@ -793,14 +827,15 @@ fun AdaptiveSplitLayout(
             primaryPane(adaptiveModifier to local)
         }
 
-        // HANDLE PANE
-        Row(Modifier
-            .zIndex(1f)
-            .offset { IntOffset(slidePx.roundToInt(), 0) }
-            .background(MaterialTheme.colorScheme.surface)
-            .align(Alignment.TopEnd)
-            .width(rightWidthDp)
-            .fillMaxHeight(), verticalAlignment = Alignment.CenterVertically) {
+        // SECONDARY PANE
+        Row(
+            modifier = Modifier
+                .zIndex(1f)
+                .offset { IntOffset(slidePx.roundToInt(), 0) }
+                .background(MaterialTheme.colorScheme.surface)
+                .align(Alignment.TopEnd)
+                .width(rightWidthDp)
+                .fillMaxHeight(), verticalAlignment = Alignment.CenterVertically) {
 
             DragHandle(
                 reveal = reveal,
@@ -1008,7 +1043,8 @@ private fun CanvasListContent(
         CanvasSearchBar(
             modifier = Modifier
                 .padding(
-                    horizontal = searchPadding, vertical = 10.dp
+                    horizontal = searchPadding,
+                    vertical = 10.dp
                 )
                 .fillMaxWidth(),
             focusRequester = focusRequester,
@@ -1043,37 +1079,40 @@ private fun CanvasListContent(
                     onAction(CanvasListAction.RefreshData)
                 },
             ) {
-                CanvasList(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .nestedScroll(fabScrollConnection)
-                        .blur(blurRadius),
-                    isLoading = listState.isInitialLoading,
-                    isBlurred = isSearchMode,
-                    items = basePagingItems,
-                    config = baseModeConfig,
-                    selectedIds = listState.selectedIds,
-                    selectedPreviewId = paneState.selectedScribbleId,
-                    onClicked = { id ->
-                        onAction(
-                            CanvasListAction.CanvasItemInteractionAction(
-                                CanvasItemInteraction(
-                                    clickType = CanvasItemClickType.CLICK,
-                                    selectedId = id,
+                if (listState.isInitialLoading) {
+                    CanvasShimmer(baseModeConfig)
+                } else {
+                    CanvasList(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .nestedScroll(fabScrollConnection)
+                            .blur(blurRadius),
+                        isBlurred = isSearchMode,
+                        items = basePagingItems,
+                        config = baseModeConfig,
+                        selectedIds = listState.selectedIds,
+                        selectedPreviewId = paneState.selectedScribbleId,
+                        onClicked = { id ->
+                            onAction(
+                                CanvasListAction.CanvasItemInteractionAction(
+                                    CanvasItemInteraction(
+                                        clickType = CanvasItemClickType.CLICK,
+                                        selectedId = id,
+                                    )
                                 )
                             )
-                        )
-                    },
-                    onLongClicked = { id ->
-                        onAction(
-                            CanvasListAction.CanvasItemInteractionAction(
-                                CanvasItemInteraction(
-                                    clickType = CanvasItemClickType.LONG_CLICK, selectedId = id
+                        },
+                        onLongClicked = { id ->
+                            onAction(
+                                CanvasListAction.CanvasItemInteractionAction(
+                                    CanvasItemInteraction(
+                                        clickType = CanvasItemClickType.LONG_CLICK, selectedId = id
+                                    )
                                 )
                             )
-                        )
-                    },
-                )
+                        },
+                    )
+                }
 
                 ConfirmationDialog(state = dialogState.confirmationDialog, onConfirm = {
                     onAction(
@@ -1161,7 +1200,6 @@ private fun CanvasListContent(
 
                     CanvasList(
                         modifier = Modifier.fillMaxSize(),
-                        isLoading = false,
                         isBlurred = false,
                         items = searchPagingItems,
                         config = searchModeConfig,

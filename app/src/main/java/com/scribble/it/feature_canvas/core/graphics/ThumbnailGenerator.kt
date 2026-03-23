@@ -7,7 +7,6 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.util.Log
 import com.scribble.it.feature_canvas.core.graphics.error.GenerateErrorType
-import com.scribble.it.feature_canvas.core.graphics.error.SaveErrorType
 import com.scribble.it.feature_canvas.core.graphics.error.ThumbnailError
 import com.scribble.it.feature_canvas.domain.fileManager.FileManager
 import com.scribble.it.feature_canvas.domain.model.canvas.CanvasDrawing
@@ -17,9 +16,6 @@ import com.scribble.it.ui.adaptive.scale.CanvasConstants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
 import javax.inject.Inject
 
 class ThumbnailGenerator @Inject constructor(
@@ -68,17 +64,16 @@ class ThumbnailGenerator @Inject constructor(
 
         if (canvasStrokes.isEmpty()) return bitmap
 
-        drawPaths(canvas, canvasStrokes, width, height)
+        width.drawPaths(canvas, canvasStrokes, height)
         return bitmap
     }
 
-    private fun drawPaths(
+    private fun Int.drawPaths(
         canvas: Canvas,
         strokes: List<CanvasStroke>,
-        width: Int,
         height: Int
     ) {
-        val scaleX = width / CanvasConstants.PAGE_WIDTH
+        val scaleX = this / CanvasConstants.PAGE_WIDTH
         val scaleY = height / CanvasConstants.PAGE_HEIGHT
 
         val path = Path()
@@ -106,7 +101,7 @@ class ThumbnailGenerator @Inject constructor(
             val y = stroke.y * scaleY
 
             if (stroke.colorArgb != currentColor || stroke.brushSizeNormalized != currentBrush) {
-                linePaint.strokeWidth = currentBrush * width
+                linePaint.strokeWidth = currentBrush * this
                 canvas.drawPath(path, linePaint)
                 path.reset()
 
@@ -121,11 +116,11 @@ class ThumbnailGenerator @Inject constructor(
             when (stroke.penType) {
                 PEN.MOVE -> path.moveTo(x, y)
                 PEN.DRAW -> path.lineTo(x, y)
-                PEN.DOT -> canvas.drawCircle(x, y, currentBrush * width, dotPaint)
+                PEN.DOT -> canvas.drawCircle(x, y, currentBrush * this, dotPaint)
             }
         }
 
-        linePaint.strokeWidth = currentBrush * width
+        linePaint.strokeWidth = currentBrush * this
         canvas.drawPath(path, linePaint)
     }
 
