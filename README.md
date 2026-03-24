@@ -97,11 +97,18 @@ It’s more than responsive design; it’s a metric-driven, interactive adaptive
 	✦	Screen size classification (width & height aware)
 	✦	Config-driven UI behavior for scalability
 
-### ✨ Shimmer Loading Experience
+### 🖌️ Canvas Rendering System
 
-	✦	Reusable shimmer components
-	✦	Dedicated layouts for list and grid loading states
-	✦	Improved perceived performance
+	✦ Built custom drawing system using Compose Canvas
+	✦ Optimized for:
+	  ✦ Smooth rendering (GPU)
+	  ✦ Real-time drawing interactions
+
+### 🧭 Navigation & UX
+
+	  ✦ Type-safe navigation
+	  ✦ Custom transitions (horizontal + vertical)
+	  ✦ Back handling with state-aware logic
 
 ### 🎯 UI & Design System
   
