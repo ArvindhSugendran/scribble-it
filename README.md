@@ -146,6 +146,35 @@ It’s more than responsive design; it’s a metric-driven, interactive adaptive
 	✦	Lifecycle-aware archive & recycle bin system
 	✦	Modular and reusable UI + state architecture
 	✦	Production-ready navigation and onboarding flow
+	
+🔥 What Makes This Project Stand Out
+
+	✦	Goes beyond standard CRUD apps
+	✦	Focus on architecture + performance + scalability
+	✦	Demonstrates real-world Android engineering challenges
+	✦	Built with modern Android best practices
+	
+---
+
+This section shows **both your technical skills and the complexity of the system you built**, which is fantastic for a portfolio.
+
+## 🏫 Learnings
+
+This project pushed me to **explore and acquire a wide range of advanced Android and software engineering concepts**. Some highlights include:
+
+✦ **Kotlin & Jetpack Compose** – building reactive UIs, managing state, and side-effects  
+✦ **Clean Architecture & Feature-based Separation** – structuring scalable, maintainable code  
+✦ **Reactive Streams & Kotlin Flow** – handling timing, events, and data pipelines efficiently  
+✦ **Custom Canvas & Drawing System** – stroke-based rendering, brush/stroke configuration, viewport transformations, thumbnail generation  
+✦ **Material 3 Theming & Adaptive Design** – light/dark modes, dynamic colors, metrics-driven layouts  
+✦ **Custom Interactive Layout Engines** – building two-pane layouts with drag-resize, snapping, partial visibility, and smooth animation  
+✦ **Metrics Engine & Layout Calculations** – dynamically scaling components based on screen, pane, and layout configuration  
+✦ **Persistence & Data Handling** – Room DB, type converters, DataStore preferences, and file management  
+✦ **Problem-solving & Mathematical Applications** – geometry, scaling, viewport transformations, animation math, and optimization  
+
+> And much more — this project was essentially **framework-level UI and architecture engineering** packed into a single app.
+
+---
 
 ## 👨‍💻 Author
 Arvindh Prasadh Sugendran
