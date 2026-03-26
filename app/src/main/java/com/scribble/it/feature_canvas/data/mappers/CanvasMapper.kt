@@ -1,8 +1,8 @@
 package com.scribble.it.feature_canvas.data.mappers
 
 import com.scribble.it.feature_canvas.data.local.db.entities.CanvasEntity
-import com.scribble.it.feature_canvas.data.local.db.model.CanvasStrokeEntity
-import com.scribble.it.feature_canvas.data.local.db.model.CanvasSummaryEntity
+import com.scribble.it.feature_canvas.data.local.db.model.CanvasStrokeDto
+import com.scribble.it.feature_canvas.data.local.db.model.CanvasSummaryDto
 import com.scribble.it.feature_canvas.domain.model.canvas.CanvasDrawing
 import com.scribble.it.feature_canvas.domain.model.canvasSummary.CanvasSummary
 import com.scribble.it.feature_canvas.domain.model.stroke.CanvasStroke
@@ -23,7 +23,7 @@ fun CanvasDrawing.toCanvasEntity(): CanvasEntity {
     )
 }
 
-fun CanvasSummaryEntity.toCanvasSummary(): CanvasSummary {
+fun CanvasSummaryDto.toCanvasSummary(): CanvasSummary {
     return CanvasSummary(
         id = this.id,
         title = this.title,
@@ -49,8 +49,8 @@ fun CanvasEntity.toCanvasDrawing(): CanvasDrawing {
     )
 }
 
-fun CanvasStroke.toCanvasStrokeDto(): CanvasStrokeEntity {
-    return CanvasStrokeEntity(
+fun CanvasStroke.toCanvasStrokeDto(): CanvasStrokeDto {
+    return CanvasStrokeDto(
         x = this.x,
         y = this.y,
         penType = this.penType.name,
@@ -60,7 +60,7 @@ fun CanvasStroke.toCanvasStrokeDto(): CanvasStrokeEntity {
     )
 }
 
-fun CanvasStrokeEntity.toCanvasStroke(): CanvasStroke {
+fun CanvasStrokeDto.toCanvasStroke(): CanvasStroke {
     return CanvasStroke(
         x = this.x,
         y = this.y,

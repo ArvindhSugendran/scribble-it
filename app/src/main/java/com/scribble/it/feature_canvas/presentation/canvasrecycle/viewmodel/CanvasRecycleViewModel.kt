@@ -232,10 +232,16 @@ class CanvasRecycleViewModel @Inject constructor(
                     is BulkActionEvent.Request -> {
                         val (title, message) = when (event.type) {
                             BulkRecycleActionType.DELETE_ALL ->
-                                "Delete Forever" to "This cannot be undone."
+                                if (event.requestFrom.isNotEmpty() && event.requestFrom == "APPBAR")
+                                    "Empty Trash" to "All Items will be deleted forever."
+                                else
+                                    "Delete Forever" to "This cannot be undone."
 
                             BulkRecycleActionType.RESTORE_ALL ->
-                                "Restore" to "Items will be restored."
+                                if (event.requestFrom.isNotEmpty() && event.requestFrom == "APPBAR")
+                                    "Restore Everything" to "All Items will be restored."
+                                else
+                                    "Restore" to "Items will be restored."
 
                             else -> return
                         }

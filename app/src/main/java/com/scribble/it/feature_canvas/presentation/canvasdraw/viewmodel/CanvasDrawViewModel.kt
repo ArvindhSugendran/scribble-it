@@ -79,6 +79,10 @@ class CanvasDrawViewModel @Inject constructor(
 
     init {
         val scribbleId = savedStateHandle.toRoute<CanvasDrawRoute>().id
+        Log.d(
+            "CanvasById",
+            scribbleId.toString() + " ----"
+        )
         scribbleId?.let {
             viewModelScope.launch {
                 getCanvasByIdUseCase(canvasId = scribbleId)

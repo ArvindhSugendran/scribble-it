@@ -1,6 +1,6 @@
 package com.scribble.it.feature_canvas.data.local.db.model
 
-data class CanvasSummaryEntity(
+data class CanvasSummaryDto(
     val id: Long?,
     val title: String,
     val thumbnailPath: String?,

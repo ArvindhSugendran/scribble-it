@@ -293,6 +293,7 @@ fun CanvasRecycleScreen(
                                         BulkActionEvent.Request(
                                             targetIds = recyclePagingItems.itemSnapshotList.items.mapNotNull { it.id }
                                                 .toSet(),
+                                            requestFrom = "APPBAR",
                                             type = BulkRecycleActionType.RESTORE_ALL
                                         )
                                     )
@@ -317,6 +318,7 @@ fun CanvasRecycleScreen(
                                         BulkActionEvent.Request(
                                             targetIds = recyclePagingItems.itemSnapshotList.items.mapNotNull { it.id }
                                                 .toSet(),
+                                            requestFrom = "APPBAR",
                                             type = BulkRecycleActionType.DELETE_ALL
                                         )
                                     )

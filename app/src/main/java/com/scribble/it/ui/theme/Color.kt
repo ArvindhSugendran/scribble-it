@@ -25,6 +25,17 @@ val Violet80 = Color(0xFFD6C7FF)
 val Violet90 = Color(0xFFEDE6FF)
 
 // =======================
+// Secondary Palette (Amber Version)
+// =======================
+
+val AmberSurface10 = Color(0xFF1F1408)
+val AmberSurface20 = Color(0xFF2C1F10)
+val AmberSurface30 = Color(0xFF3A2F1F)
+val AmberSurface40 = Color(0xFF4A3A28)
+val AmberSurface80 = Color(0xFFFFD9A3)
+val AmberSurface90 = Color(0xFFFFF3E0)
+
+// =======================
 // Tertiary Palette (Moss)
 // =======================
 val Moss10 = Color(0xFF0E2624)

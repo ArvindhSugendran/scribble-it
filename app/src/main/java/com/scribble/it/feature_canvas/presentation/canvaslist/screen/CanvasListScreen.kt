@@ -1,6 +1,7 @@
 package com.scribble.it.feature_canvas.presentation.canvaslist.screen
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -63,7 +64,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -99,7 +99,6 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -156,11 +155,9 @@ import com.scribble.it.feature_canvas.presentation.common.components.CanvasShimm
 import com.scribble.it.feature_canvas.presentation.common.components.ConfirmationDialog
 import com.scribble.it.feature_canvas.presentation.common.state.CanvasViewMode
 import com.scribble.it.feature_canvas.presentation.common.state.CanvasViewModeConfig
-import com.scribble.it.ui.adaptive.layoutConfig.getLayoutConfiguration
 import com.scribble.it.ui.adaptive.layoutConfig.getPaneLayoutConfiguration
 import com.scribble.it.ui.adaptive.layoutConfig.isTwoPaneAllowed
 import com.scribble.it.ui.adaptive.scale.ScreenScale
-import com.scribble.it.ui.adaptive.scale.WidthClass
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -189,18 +186,10 @@ fun CanvasListScreen(
     onNavigateToCanvasRecycle: () -> Unit,
     lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current
 ) {
-    val configuration = LocalConfiguration.current
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val typography = MaterialTheme.typography
     val density = LocalDensity.current
-
-    val windowInfo = currentWindowAdaptiveInfo()
-    val windowSizeClass = windowInfo.windowSizeClass
-
-    val layoutConfig = remember(windowSizeClass, configuration) {
-        getLayoutConfiguration(windowSizeClass, configuration)
-    }
 
     val focusRequester = remember { FocusRequester() }
     val stableAdaptiveState = rememberStableAdaptiveState()
@@ -232,14 +221,12 @@ fun CanvasListScreen(
     val showSortBar = topBarState.topBarMode == TopBarMode.SORT
     val isSearchMode = topBarState.topBarMode == TopBarMode.SEARCH
 
-    val isWideLayout = layoutConfig.width >= WidthClass.MEDIUM
-
     val blurRadius by animateDpAsState(
         targetValue = if (isSearchMode) 16.dp else 0.dp, label = "blurRadius"
     )
 
     val searchPadding by animateDpAsState(
-        targetValue = if (isSearchMode && !isWideLayout) 0.dp else 16.dp,
+        targetValue = if (isSearchMode) 0.dp else 16.dp,
         label = "searchBar Padding"
     )
 
@@ -257,6 +244,12 @@ fun CanvasListScreen(
         paneState.selectedScribbleId, basePagingItems.itemSnapshotList
     ) {
         basePagingItems.itemSnapshotList.items.indexOfFirst { it.id == paneState.selectedScribbleId }
+    }
+
+    val selectedSearchIndex = remember(
+        paneState.selectedSearchScribbleId, searchPagingItems.itemSnapshotList
+    ) {
+        searchPagingItems.itemSnapshotList.items.indexOfFirst { it.id == paneState.selectedSearchScribbleId }
     }
 
     val textReveal = remember { androidx.compose.animation.core.Animatable(0f) }
@@ -308,7 +301,7 @@ fun CanvasListScreen(
     }
 
     LaunchedEffect(isSearchMode) {
-        if (isSearchMode) {
+        if (isSearchMode && (paneState.paneMode == PaneMode.TwoPane.Split || paneState.paneMode == PaneMode.SinglePane)) {
             focusRequester.requestFocus()
             onAction(
                 CanvasListAction.QueryChange(
@@ -373,16 +366,17 @@ fun CanvasListScreen(
                             when (listState.canvasViewMode) {
                                 CanvasViewMode.LIST -> {
                                     snapshotFlow { canvasListState.layoutInfo.totalItemsCount }
-                                        .filter { it > 0 }
+                                        .filter { it >= 0 }
                                         .first()
-                                    withFrameNanos {  }
+                                    withFrameNanos { }
                                     canvasListState.animateScrollToItem(0)
                                 }
+
                                 CanvasViewMode.GRID -> {
                                     snapshotFlow { canvasGridState.layoutInfo.totalItemsCount }
-                                        .filter { it > 0 }
+                                        .filter { it >= 0 }
                                         .first()
-                                    withFrameNanos {  }
+                                    withFrameNanos { }
                                     canvasGridState.animateScrollToItem(0, 0)
                                 }
                             }
@@ -400,7 +394,6 @@ fun CanvasListScreen(
     var previousMode by rememberSaveable { mutableStateOf<CanvasViewMode?>(null) }
 
     LaunchedEffect(selectedIndex, listState.canvasViewMode) {
-
         val offsetPx = with(density) { 50.dp.roundToPx() }
         when (listState.canvasViewMode) {
             CanvasViewMode.LIST -> {
@@ -425,6 +418,23 @@ fun CanvasListScreen(
         }
 
         previousMode = listState.canvasViewMode
+    }
+
+    LaunchedEffect(selectedSearchIndex, listState.canvasViewMode) {
+        val offsetPx = with(density) { 50.dp.roundToPx() }
+        when (listState.canvasViewMode) {
+            CanvasViewMode.LIST -> {
+                if (selectedSearchIndex != -1) {
+                    searchResultsListState.animateScrollToItem(selectedSearchIndex)
+                }
+            }
+
+            CanvasViewMode.GRID -> {
+                if (selectedSearchIndex != -1) {
+                    searchResultsGridState.animateScrollToItem(selectedSearchIndex, scrollOffset = (-offsetPx))
+                }
+            }
+        }
     }
 
     LaunchedEffect(searchResultsGridState, searchResultsListState) {
@@ -494,6 +504,7 @@ fun CanvasListScreen(
         }
     }
 
+    @Suppress("SameReturnValue")
     val fabScrollConnection = remember {
         object : NestedScrollConnection {
 
@@ -501,11 +512,14 @@ fun CanvasListScreen(
             private val threshold = 200f
 
             override fun onPreScroll(
-                available: Offset, source: NestedScrollSource
+                available: Offset,
+                source: NestedScrollSource
             ): Offset {
 
-                val isScrollable =
-                    canvasGridState.canScrollForward || canvasGridState.canScrollBackward
+                val isScrollable = (canvasGridState.canScrollForward
+                        || canvasGridState.canScrollBackward
+                        || canvasListState.canScrollForward
+                        || canvasListState.canScrollBackward)
 
                 if (!isScrollable) {
                     accumulatedScroll = 0f
@@ -592,7 +606,7 @@ fun CanvasListScreen(
                         content()
                     }
                 }, content = {
-                    if (baseEmpty && !listState.isInitialLoading && !listState.isRefreshing) {
+                    if (baseEmpty && !listState.isInitialLoading && !listState.isRefreshing && !isSearchMode) {
                         Text(
                             text = "Create your first Scribble ✏️",
                             modifier = Modifier
@@ -692,8 +706,9 @@ fun CanvasListScreen(
                 }, content = {
                     PreviewPane(
                         modifier = Modifier.fillMaxSize(),
-                        pagingItems = basePagingItems,
-                        selectedIndex = selectedIndex,
+                        pagingItems = if(!isSearchMode) basePagingItems else searchPagingItems,
+                        selectedIndex = if(!isSearchMode) selectedIndex else selectedSearchIndex,
+                        userScrollEnabled = !listState.isInitialLoading && !listState.isRefreshing,
                         onPageChanged = { id ->
                             onAction(CanvasListAction.OnPageChanged(id))
                         },
@@ -716,6 +731,17 @@ fun CanvasListScreen(
             }
 
             TopBarMode.SEARCH -> {
+                if(paneState.paneMode == PaneMode.TwoPane.FullPreview) {
+                    stableAdaptiveState.commit(
+                        0.5f, null
+                    )
+                    onAction(
+                        CanvasListAction.OnPaneChanged(
+                            PaneMode.TwoPane.Split
+                        )
+                    )
+                    return@BackHandler
+                }
                 keyboardController?.hide()
                 focusManager.clearFocus()
                 onAction(CanvasListAction.UpdateTopBarMode(TopBarMode.DEFAULT))
@@ -786,7 +812,11 @@ fun AdaptiveSplitLayout(
         val dividerDp = with(density) { dividerX.toDp() }
 
         val leftWidthDp = if (animatedReveal >= 0.5f) {
-            dividerDp - handleBoxWidth / 2
+            if(animatedReveal >= 0.95f) {
+                dividerDp - handleBoxWidth
+            } else {
+                dividerDp - handleBoxWidth / 2
+            }
         } else {
             halfWidthDp - handleBoxWidth / 2
         }
@@ -804,6 +834,17 @@ fun AdaptiveSplitLayout(
         } else 0f
 
         val visibleLeftWidthDp = dividerDp - handleBoxWidth / 2
+
+        Log.d("PANE_MATH", """
+            animatedReveal: $animatedReveal
+            maxWidth: $maxWidth
+            halfWidth: $halfWidthDp
+            divider: $dividerDp
+            leftWidth: $leftWidthDp
+            rightWidth: $rightWidthDp
+            handleWidth: $handleBoxWidth
+            slideDp: ${with(density){slidePx.toDp()}}
+        """.trimIndent())
 
         adaptiveModifier = Modifier.fillMaxSize()
         local = LocalVisiblePaneWidth provides visibleLeftWidthDp
@@ -854,6 +895,102 @@ fun AdaptiveSplitLayout(
                 secondaryPane(adaptiveModifier to local)
             }
         }
+    }
+}
+
+@Composable
+private fun DragHandle(
+    reveal: Float,
+    totalWidthPx: Float,
+    handleBoxWidth: Dp,
+    onRevealChange: (Float) -> Unit,
+    onPaneStateChange: (PaneMode) -> Unit,
+    stableAdaptiveState: StableAdaptiveState,
+) {
+    var localReveal by remember { mutableFloatStateOf(reveal) }
+    var handleWidth by remember { mutableStateOf(8.dp) }
+    var isDragging by remember { mutableStateOf(false) }
+    var idleJob by remember { mutableStateOf<Job?>(null) }
+
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(reveal) {
+        localReveal = reveal
+    }
+
+    Box(Modifier
+        .width(handleBoxWidth)
+        .height(70.dp)
+        .systemGestureExclusion { coords ->
+            Rect(
+                0f, 0f, coords.size.width.toFloat(), coords.size.height.toFloat()
+            )
+        }
+        .pointerInput(totalWidthPx) {
+            detectHorizontalDragGestures(onHorizontalDrag = { change, dx ->
+                change.consume()
+
+                if (!isDragging) {
+                    isDragging = true
+                    val startWidth = totalWidthPx * localReveal
+                    stableAdaptiveState.freeze(with(density) { startWidth.toDp() })
+                }
+
+                localReveal = (localReveal + dx / totalWidthPx).coerceIn(0f, 1f)
+
+                onRevealChange(localReveal)
+                handleWidth = 13.dp
+
+                idleJob?.cancel()
+                idleJob = scope.launch {
+                    delay(100)
+                    if (localReveal < 0.5f) {
+                        stableAdaptiveState.commit(
+                            0.5f, null
+                        )
+                    } else {
+                        val currentWidth = totalWidthPx * localReveal
+                        stableAdaptiveState.commit(localReveal, with(density) {
+                            currentWidth.toDp()
+                        })
+                    }
+                }
+            }, onDragEnd = {
+                localReveal = when {
+                    localReveal > 0.8f -> 1f
+                    localReveal < 0.2f -> 0f
+                    else -> 0.5f
+                }
+
+                val finalState = when (localReveal) {
+                    0f -> PaneMode.TwoPane.FullPreview
+                    0.5f -> PaneMode.TwoPane.Split
+                    1f -> PaneMode.TwoPane.FullList
+                    else -> PaneMode.TwoPane.Split
+                }
+
+                handleWidth = 8.dp
+                isDragging = false
+
+                idleJob?.cancel()
+                val finalWidth = totalWidthPx * localReveal
+                stableAdaptiveState.commit(localReveal, with(density) {
+                    finalWidth.toDp()
+                })
+
+                onPaneStateChange(finalState)
+            })
+        }) {
+        Box(
+            Modifier
+                .align(Alignment.Center)
+                .width(handleWidth)
+                .height(50.dp)
+                .background(
+                    MaterialTheme.colorScheme.onSurfaceVariant, RoundedCornerShape(10.dp)
+                )
+        )
     }
 }
 
@@ -1137,9 +1274,6 @@ private fun CanvasListContent(
             ) {
                 Box(modifier = Modifier
                     .fillMaxSize()
-                    .padding(
-                        horizontal = searchPadding
-                    )
                     .imePadding()
                     .pointerInput(Unit) {
                         detectTapGestures {
@@ -1166,11 +1300,11 @@ private fun CanvasListContent(
                                 .padding(horizontal = 24.dp)
                                 .shadow(
                                     elevation = 12.dp,
-                                    shape = RoundedCornerShape(25)
+                                    shape = RoundedCornerShape(50)
                                 )
-                                .align(Alignment.Center)
+                                .align(Alignment.Center),
+                            contentAlignment = Alignment.Center
                         ) {
-
                             Box(
                                 modifier = Modifier
                                     .matchParentSize()
@@ -1179,7 +1313,7 @@ private fun CanvasListContent(
                                     .border(
                                         width = 1.dp,
                                         color = Color.White,
-                                        shape = RoundedCornerShape(25)
+                                        shape = RoundedCornerShape(50)
                                     )
                             )
 
@@ -1199,16 +1333,28 @@ private fun CanvasListContent(
                     }
 
                     CanvasList(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(searchPagingItems.itemCount > 0) {
+                                if(searchPagingItems.itemCount > 0) {
+                                    detectTapGestures {
+                                        keyboardController?.hide()
+                                        focusManager.clearFocus()
+                                    }
+                                }
+                            }
+                        ,
                         isBlurred = false,
                         items = searchPagingItems,
                         config = searchModeConfig,
                         selectedIds = emptySet(),
+                        selectedPreviewId = paneState.selectedSearchScribbleId,
                         onClicked = { id ->
                             onAction(
                                 CanvasListAction.CanvasItemInteractionAction(
                                     CanvasItemInteraction(
-                                        clickType = CanvasItemClickType.CLICK, selectedId = id
+                                        clickType = CanvasItemClickType.CLICK,
+                                        selectedId = id
                                     )
                                 )
                             )
@@ -1265,6 +1411,7 @@ private fun PreviewPane(
     pagingItems: LazyPagingItems<CanvasSummary>,
     selectedIndex: Int,
     onPageChanged: (Long) -> Unit,
+    userScrollEnabled: Boolean = true,
     onAction: (CanvasListAction) -> Unit
 ) {
 
@@ -1394,6 +1541,7 @@ private fun PreviewPane(
 
         HorizontalPager(
             state = pagerState,
+            userScrollEnabled = userScrollEnabled,
             modifier = Modifier.fillMaxSize(),
         ) { page ->
             PreviewContent(
@@ -1405,102 +1553,6 @@ private fun PreviewPane(
                 editPreview = { onAction(CanvasListAction.EditPreview) }
             )
         }
-    }
-}
-
-@Composable
-private fun DragHandle(
-    reveal: Float,
-    totalWidthPx: Float,
-    handleBoxWidth: Dp,
-    onRevealChange: (Float) -> Unit,
-    onPaneStateChange: (PaneMode) -> Unit,
-    stableAdaptiveState: StableAdaptiveState,
-) {
-    var localReveal by remember { mutableFloatStateOf(reveal) }
-    var handleWidth by remember { mutableStateOf(8.dp) }
-    var isDragging by remember { mutableStateOf(false) }
-    var idleJob by remember { mutableStateOf<Job?>(null) }
-
-    val density = LocalDensity.current
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(reveal) {
-        localReveal = reveal
-    }
-
-    Box(Modifier
-        .width(handleBoxWidth)
-        .height(70.dp)
-        .systemGestureExclusion { coords ->
-            Rect(
-                0f, 0f, coords.size.width.toFloat(), coords.size.height.toFloat()
-            )
-        }
-        .pointerInput(totalWidthPx) {
-            detectHorizontalDragGestures(onHorizontalDrag = { change, dx ->
-                change.consume()
-
-                if (!isDragging) {
-                    isDragging = true
-                    val startWidth = totalWidthPx * localReveal
-                    stableAdaptiveState.freeze(with(density) { startWidth.toDp() })
-                }
-
-                localReveal = (localReveal + dx / totalWidthPx).coerceIn(0f, 1f)
-
-                onRevealChange(localReveal)
-                handleWidth = 13.dp
-
-                idleJob?.cancel()
-                idleJob = scope.launch {
-                    delay(100)
-                    if (localReveal < 0.5f) {
-                        stableAdaptiveState.commit(
-                            0.5f, null
-                        )
-                    } else {
-                        val currentWidth = totalWidthPx * localReveal
-                        stableAdaptiveState.commit(localReveal, with(density) {
-                            currentWidth.toDp()
-                        })
-                    }
-                }
-            }, onDragEnd = {
-                localReveal = when {
-                    localReveal > 0.8f -> 1f
-                    localReveal < 0.2f -> 0f
-                    else -> 0.5f
-                }
-
-                val finalState = when (localReveal) {
-                    0f -> PaneMode.TwoPane.FullPreview
-                    0.5f -> PaneMode.TwoPane.Split
-                    1f -> PaneMode.TwoPane.FullList
-                    else -> PaneMode.TwoPane.Split
-                }
-
-                handleWidth = 8.dp
-                isDragging = false
-
-                idleJob?.cancel()
-                val finalWidth = totalWidthPx * localReveal
-                stableAdaptiveState.commit(localReveal, with(density) {
-                    finalWidth.toDp()
-                })
-
-                onPaneStateChange(finalState)
-            })
-        }) {
-        Box(
-            Modifier
-                .align(Alignment.Center)
-                .width(handleWidth)
-                .height(50.dp)
-                .background(
-                    MaterialTheme.colorScheme.onSurfaceVariant, RoundedCornerShape(10.dp)
-                )
-        )
     }
 }
 

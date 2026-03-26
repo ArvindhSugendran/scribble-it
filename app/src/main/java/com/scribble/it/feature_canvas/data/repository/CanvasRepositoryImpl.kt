@@ -7,7 +7,7 @@ import androidx.paging.map
 import com.scribble.it.feature_canvas.data.local.datastore.ScribbleDataStorePreferences
 import com.scribble.it.feature_canvas.data.util.PAGE_SIZE
 import com.scribble.it.feature_canvas.data.local.db.dao.ScribbleDao
-import com.scribble.it.feature_canvas.data.local.db.model.CanvasSummaryEntity
+import com.scribble.it.feature_canvas.data.local.db.model.CanvasSummaryDto
 import com.scribble.it.feature_canvas.data.mappers.toCanvasDrawing
 import com.scribble.it.feature_canvas.data.mappers.toCanvasEntity
 import com.scribble.it.feature_canvas.data.mappers.toCanvasSummary
@@ -45,8 +45,8 @@ class CanvasRepositoryImpl @Inject constructor(
                 )
             }
         ).flow
-            .map { value: PagingData<CanvasSummaryEntity> ->
-                value.map { canvasSummary: CanvasSummaryEntity ->
+            .map { value: PagingData<CanvasSummaryDto> ->
+                value.map { canvasSummary: CanvasSummaryDto ->
                     canvasSummary.toCanvasSummary()
                 }
             }
@@ -127,5 +127,4 @@ class CanvasRepositoryImpl @Inject constructor(
         return scribbleDataStorePreferences
             .getOnBoardingStatus()
     }
-
 }

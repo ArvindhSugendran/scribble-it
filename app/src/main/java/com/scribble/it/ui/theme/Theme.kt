@@ -25,8 +25,8 @@ private val DarkColorScheme = darkColorScheme(
     // Secondary — Dusty Violet
     secondary = Violet80,
     onSecondary = Violet20,
-    secondaryContainer = Violet30,
-    onSecondaryContainer = Violet90,
+    secondaryContainer = AmberSurface30,
+    onSecondaryContainer = AmberSurface90,
 
     // Tertiary — Moss Teal
     tertiary = Moss80,
@@ -68,8 +68,8 @@ private val LightColorScheme = lightColorScheme(
     // Secondary — Dusty Violet
     secondary = Violet40,
     onSecondary = Color.White,
-    secondaryContainer = Violet90,
-    onSecondaryContainer = Violet10,
+    secondaryContainer = AmberSurface90,
+    onSecondaryContainer = AmberSurface10,
 
     // Tertiary — Moss Teal
     tertiary = Moss40,
@@ -122,7 +122,7 @@ object ScribbleTheme {
 @Composable
 fun ScribbleTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

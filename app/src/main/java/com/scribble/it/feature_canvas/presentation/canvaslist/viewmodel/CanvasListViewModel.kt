@@ -62,47 +62,37 @@ class CanvasListViewModel @Inject constructor(
 
     private val refreshTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
-    private val sortFlow = canvasListUiState
-        .map { state ->
+    private val sortFlow = canvasListUiState.map { state ->
             state.topBar.sortOption
-        }
-        .distinctUntilChanged()
+        }.distinctUntilChanged()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val basePagingFlow: Flow<PagingData<CanvasSummary>> =
-        refreshTrigger
-            .onStart { emit(Unit) }
-            .flatMapLatest {
-                sortFlow
-                    .flatMapLatest { sortOption ->
+        refreshTrigger.onStart { emit(Unit) }.flatMapLatest {
+                sortFlow.flatMapLatest { sortOption ->
                         Log.d("PAGING_DATA", sortOption.toString())
                         getPagingCanvasesUseCase(
-                            query = "",
-                            sortOption = sortOption.name,
-                            isRecycled = false
+                            query = "", sortOption = sortOption.name, isRecycled = false
                         )
                     }
-            }
-            .cachedIn(viewModelScope)
+            }.cachedIn(viewModelScope)
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-    val searchPagingFlow: Flow<PagingData<CanvasSummary>> =
-        canvasListUiState
-            .map { state -> Triple(state.topBar.query.text, state.topBar.sortOption, false) }
-            .distinctUntilChanged()
-            .debounce(200)
-            .flatMapLatest { (query, sortOption, isRecycled) ->
-                if (query.isBlank()) {
-                    flowOf(PagingData.empty())
-                } else {
-                    getPagingCanvasesUseCase(
-                        query = query,
-                        sortOption = sortOption.name,
-                        isRecycled = isRecycled
-                    )
-                }
+    val searchPagingFlow: Flow<PagingData<CanvasSummary>> = canvasListUiState.map { state ->
+            Triple(
+                state.topBar.query.text,
+                state.topBar.sortOption,
+                false
+            )
+        }.distinctUntilChanged().debounce(200).flatMapLatest { (query, sortOption, isRecycled) ->
+            if (query.isBlank()) {
+                flowOf(PagingData.empty())
+            } else {
+                getPagingCanvasesUseCase(
+                    query = query, sortOption = sortOption.name, isRecycled = isRecycled
+                )
             }
-            .cachedIn(viewModelScope)
+        }.cachedIn(viewModelScope)
 
     init {
         loadScribbleViewMode()
@@ -110,7 +100,6 @@ class CanvasListViewModel @Inject constructor(
 
     private fun loadScribbleViewMode() {
         viewModelScope.launch {
-
             val viewMode = canvasRepository.getScribbleViewMode().first()
             val sortMode = canvasRepository.getScribbleSortMode().first()
 
@@ -181,8 +170,7 @@ class CanvasListViewModel @Inject constructor(
             is CanvasListAction.QueryChange -> {
                 _canvasListUiState.update { state ->
                     state.copy(
-                        topBar = state.topBar.copy(query = action.query),
-                        list = state.list.copy(
+                        topBar = state.topBar.copy(query = action.query), list = state.list.copy(
                             showEmptyScribbles = if (action.query.text.isBlank()) false else state.list.showEmptyScribbles
                         )
                     )
@@ -214,8 +202,7 @@ class CanvasListViewModel @Inject constructor(
                     _canvasListUiState.update { state ->
                         state.copy(
                             list = state.list.copy(
-                                isInitialLoading = true,
-                                isRefreshing = true
+                                isInitialLoading = true, isRefreshing = true
                             )
                         )
                     }
@@ -228,6 +215,7 @@ class CanvasListViewModel @Inject constructor(
             // List Actions
             is CanvasListAction.CanvasItemInteractionAction -> {
                 val interaction = action.interaction
+                val searchMode = _canvasListUiState.value.topBar.topBarMode == TopBarMode.SEARCH
                 when (interaction.clickType) {
                     CanvasItemClickType.CLICK -> {
                         val topBarMode = _canvasListUiState.value.topBar.topBarMode
@@ -235,10 +223,18 @@ class CanvasListViewModel @Inject constructor(
                             toggleSelectedItems(id = interaction.selectedId)
                         } else {
                             if (_canvasListUiState.value.pane.paneMode == PaneMode.TwoPane.Split) {
-                                _canvasListUiState.update { state ->
-                                    state.copy(
-                                        pane = state.pane.copy(selectedScribbleId = interaction.selectedId)
-                                    )
+                                if (searchMode) {
+                                    _canvasListUiState.update { state ->
+                                        state.copy(
+                                            pane = state.pane.copy(selectedSearchScribbleId = interaction.selectedId)
+                                        )
+                                    }
+                                } else {
+                                    _canvasListUiState.update { state ->
+                                        state.copy(
+                                            pane = state.pane.copy(selectedScribbleId = interaction.selectedId)
+                                        )
+                                    }
                                 }
                             } else {
                                 viewModelScope.launch {
@@ -296,7 +292,10 @@ class CanvasListViewModel @Inject constructor(
 
             is CanvasListAction.UpdateShowSearchEmpty -> {
                 _canvasListUiState.update { state ->
-                    state.copy(list = state.list.copy(showEmptyScribbles = action.showEmptyResultsText))
+                    state.copy(
+                        list = state.list.copy(showEmptyScribbles = action.showEmptyResultsText),
+                        pane = state.pane.copy(selectedSearchScribbleId = -1)
+                    )
                 }
             }
 
@@ -311,13 +310,11 @@ class CanvasListViewModel @Inject constructor(
                             when (dialog.actionType) {
                                 BulkRecycleActionType.RECYCLE_ALL -> {
                                     archiveCanvasesUseCase(
-                                        targetIds,
-                                        ArchiveAction.RECYCLE
+                                        targetIds, ArchiveAction.RECYCLE
                                     ).collectLatest { result: Result<ArchiveUseCaseResult, CanvasError> ->
                                         when (result) {
                                             is Result.Error -> Log.d(
-                                                "CanvasArchive",
-                                                result.error.toString()
+                                                "CanvasArchive", result.error.toString()
                                             )
 
                                             is Result.Loading -> Log.d("CanvasArchive", "LOADING")
@@ -332,8 +329,7 @@ class CanvasListViewModel @Inject constructor(
                                                         topBar = state.topBar.copy(topBarMode = TopBarMode.DEFAULT),
                                                         list = state.list.copy(selectedIds = emptySet()),
                                                         pane = state.pane.copy(
-                                                            selectedScribbleId = if (selectedScribbleId > 0 &&
-                                                                selectedIds.contains(
+                                                            selectedScribbleId = if (selectedScribbleId > 0 && selectedIds.contains(
                                                                     selectedScribbleId
                                                                 )
                                                             ) {
@@ -366,8 +362,7 @@ class CanvasListViewModel @Inject constructor(
 
                     is BulkActionEvent.Request -> {
                         val (title, message) = when (event.type) {
-                            BulkRecycleActionType.RECYCLE_ALL ->
-                                "Move to Recycle Bin" to "Items will be archived."
+                            BulkRecycleActionType.RECYCLE_ALL -> "Move to Recycle Bin" to "Items will be archived."
 
                             else -> return
                         }
@@ -395,10 +390,8 @@ class CanvasListViewModel @Inject constructor(
                     state.copy(
                         pane = state.pane.copy(
                             paneReveal = action.reveal,
-                            selectedScribbleId = if (action.reveal == 1f && selectedScribbleId > 0)
-                                -1
-                            else
-                                selectedScribbleId,
+                            selectedScribbleId = if (action.reveal == 1f && selectedScribbleId > 0) -1
+                            else selectedScribbleId,
                         ),
                     )
                 }
@@ -413,23 +406,33 @@ class CanvasListViewModel @Inject constructor(
             }
 
             is CanvasListAction.OnPageChanged -> {
-                _canvasListUiState.update { state ->
-                    state.copy(
-                        pane = state.pane.copy(selectedScribbleId = action.id)
-                    )
+                val searchMode = _canvasListUiState.value.topBar.topBarMode == TopBarMode.SEARCH
+                if (searchMode) {
+                    _canvasListUiState.update { state ->
+                        state.copy(
+                            pane = state.pane.copy(selectedSearchScribbleId = action.id)
+                        )
+                    }
+                } else {
+                    _canvasListUiState.update { state ->
+                        state.copy(
+                            pane = state.pane.copy(selectedScribbleId = action.id)
+                        )
+                    }
                 }
             }
 
             is CanvasListAction.OnPaneChanged -> {
                 val reveal = when (action.paneMode) {
-                    PaneMode.SinglePane -> 1f
+                    PaneMode.SinglePane -> 0.5f
                     PaneMode.TwoPane.FullList -> 1f
                     PaneMode.TwoPane.Split -> 0.5f
                     PaneMode.TwoPane.FullPreview -> 0f
                 }
 
                 _canvasListUiState.update { state ->
-                    val currentSelectedId = state.pane.selectedScribbleId
+                    val searchMode = _canvasListUiState.value.topBar.topBarMode == TopBarMode.SEARCH
+                    val currentSelectedId = if(!searchMode) state.pane.selectedScribbleId else state.pane.selectedSearchScribbleId
                     val newPaneState =
                         if (reveal < 0.5f && currentSelectedId < 0) PaneMode.TwoPane.Split else action.paneMode
                     val newReveal = if (reveal < 0.5f && currentSelectedId < 0) 0.5f else reveal
@@ -440,13 +443,23 @@ class CanvasListViewModel @Inject constructor(
                             currentSelectedId
                         }
 
-                    state.copy(
-                        pane = state.pane.copy(
-                            paneMode = newPaneState,
-                            paneReveal = newReveal,
-                            selectedScribbleId = newSelectedId
+                    if(!searchMode) {
+                        state.copy(
+                            pane = state.pane.copy(
+                                paneMode = newPaneState,
+                                paneReveal = newReveal,
+                                selectedScribbleId = newSelectedId
+                            )
                         )
-                    )
+                    } else {
+                        state.copy(
+                            pane = state.pane.copy(
+                                paneMode = newPaneState,
+                                paneReveal = newReveal,
+                                selectedSearchScribbleId = newSelectedId
+                            )
+                        )
+                    }
                 }
 
                 Log.d(
@@ -456,10 +469,17 @@ class CanvasListViewModel @Inject constructor(
             }
 
             CanvasListAction.ClosePreview -> {
+                val searchMode = _canvasListUiState.value.topBar.topBarMode == TopBarMode.SEARCH
                 _canvasListUiState.update { state ->
                     state.copy(
                         pane = state.pane.copy(
-                            selectedScribbleId = -1
+                            selectedSearchScribbleId = if (searchMode)
+                                -1
+                            else
+                                state.pane.selectedSearchScribbleId,
+                            selectedScribbleId = -1,
+                            paneReveal = 0.5f,
+                            paneMode = PaneMode.TwoPane.Split
                         )
                     )
                 }
@@ -467,11 +487,13 @@ class CanvasListViewModel @Inject constructor(
 
             CanvasListAction.EditPreview -> {
                 val selectedScribbleId = _canvasListUiState.value.pane.selectedScribbleId
+                val selectedSearchScribbleId = _canvasListUiState.value.pane.selectedSearchScribbleId
+                val searchMode = _canvasListUiState.value.topBar.topBarMode == TopBarMode.SEARCH
                 viewModelScope.launch {
                     eventChannel.send(
                         CanvasListEvent.NavigateToCanvasDraw(
                             CanvasDrawRoute(
-                                id = selectedScribbleId
+                                id = if(!searchMode) selectedScribbleId else selectedSearchScribbleId
                             )
                         )
                     )
@@ -484,8 +506,7 @@ class CanvasListViewModel @Inject constructor(
                     _canvasListUiState.update { state ->
                         state.copy(
                             list = state.list.copy(
-                                isInitialLoading = false,
-                                isRefreshing = false
+                                isInitialLoading = false, isRefreshing = false
                             )
                         )
                     }

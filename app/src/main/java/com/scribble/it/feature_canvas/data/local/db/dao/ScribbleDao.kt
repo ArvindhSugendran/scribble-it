@@ -7,19 +7,12 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.scribble.it.feature_canvas.data.local.db.entities.CanvasEntity
-import com.scribble.it.feature_canvas.data.local.db.model.CanvasSummaryEntity
+import com.scribble.it.feature_canvas.data.local.db.model.CanvasSummaryDto
 
 @Dao
 interface ScribbleDao {
-
     @Query(
-        """SELECT
-            id,
-            title,
-            thumbnailPath,
-            createdDate,
-            modifiedDate,
-            deletedDate 
+        """SELECT id, title, thumbnailPath, createdDate, modifiedDate, deletedDate 
         FROM canvas_table
         WHERE (
         (:isRecycled AND deletedDate IS NOT NULL)
@@ -39,16 +32,16 @@ interface ScribbleDao {
     """
     )
     fun getPagingCanvases(
-        query: String,
-        sortOption: String,
-        isRecycled: Boolean
-    ): PagingSource<Int, CanvasSummaryEntity>
+        query: String, sortOption: String, isRecycled: Boolean
+    ): PagingSource<Int, CanvasSummaryDto>
 
-    @Query("""
+    @Query(
+        """
         SELECT MAX(CAST(SUBSTR(title, 10) AS INTEGER))
         FROM canvas_table
         WHERE title like 'Scribble %'
-    """)
+    """
+    )
     suspend fun getMaxScribbleNumber(): Int?
 
     @Query("SELECT MAX(autoTitleIndex) FROM canvas_table")
@@ -77,5 +70,4 @@ interface ScribbleDao {
 
     @Query("UPDATE canvas_table SET deletedDate = null WHERE id IN (:canvasIds)")
     suspend fun restoreCanvases(canvasIds: Set<Long>): Int
-
 }
