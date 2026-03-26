@@ -2,18 +2,19 @@
 
 A modern Android application that enables users to create, manage, and replay canvas drawings with a highly scalable architecture and performance-focused design.
 
-Built with a strong emphasis on clean architecture, reactive state management, and  Foldable & Adaptive UI systems, Scribble goes beyond a typical drawing app by incorporating features like replay playback, thumbnail generation, lifecycle-aware data handling, and responsive layouts.
+Built with a strong emphasis on clean architecture, reactive state management, and  Foldable & Adaptive UI systems, Scribble goes beyond a typical drawing app by incorporating features like autosave mechanism, replay playback, thumbnail generation, lifecycle-aware data handling, and responsive layouts.
 
 ## ✨ Highlights (Quick Overview)
 
 🧩 **Clean Architecture** with modular, feature-based separation  
 🧠 **Custom Metrics System** for dynamic UI scaling and adaptive layouts  
 📱 **Adaptive Layouts** for foldables, split-screen, and two-pane interactive layouts with drag-resize & snap behavior  
-🎨 **High-performance Canvas Drawing System** with GPU-optimized rendering, autosave mechanism, brush/stroke options, and viewport transforms  
+⚡ **High-performance Canvas Drawing System** with GPU-optimized rendering, autosave mechanism, brush/stroke options, and viewport transforms  
 🎬 **Replay System** for canvas drawings with interactive playback controls  
 🖼️ **Thumbnail Generation** for canvas previews and optimized file storage  
 ⚡ **Paging 3 Integration** with manual refresh triggers and optimized Kotlin Flow handling  
-🎯 **Advanced State Management** using Kotlin Flows + ViewModel  
+🎯 **Advanced State Management** using Kotlin Flows + ViewModel
+🎨 **Material 3 Theming System** with dynamic colors, custom palettes, and CompositionLocal-driven color injection  
 🔄 **Smart UI Synchronization** between list, grid, and drawing screens
 
 ## 🎥 Demo
