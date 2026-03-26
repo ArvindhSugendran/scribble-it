@@ -16,6 +16,22 @@ Built with a strong emphasis on clean architecture, reactive state management, a
 🎯 **Advanced State Management** using Kotlin Flows + ViewModel  
 🔄 **Smart UI Synchronization** between list, grid, and drawing screens
 
+## 🎥 Demo
+
+⚡ Short previews below — full demo linked above
+
+### ✦ Drawing on Canvas
+https://github.com/user-attachments/assets/be79d406-ec97-4540-84c4-81a5b39e5803
+
+### ✦ Two-Pane Adaptive Layout Interaction
+https://github.com/user-attachments/assets/9dfebc1c-7238-4f73-a3d2-88e6fc2f2f5f
+
+### ✦ Replay System
+https://github.com/user-attachments/assets/552a5088-1a23-43bd-96d7-edcf3ebebb78
+
+### ✦ Seamless transition List <-> Grid <-> Horizontal Pager
+https://github.com/user-attachments/assets/79c5e881-9327-4033-b2dd-7ce648cefed3
+
 ## 🧠 Architecture
 
 This project follows a Clean Architecture approach with **feature-based separation**, meaning each major feature (Canvas, Recycle, Onboarding, etc.) has its own clearly defined module structure for UI, ViewModel, UseCases, and Repository.
@@ -103,7 +119,8 @@ It’s more than responsive design; it’s a metric-driven, interactive adaptive
 	✦	File system integration for persistent preview storage
 
 ### 📱 Adaptive UI System
-  
+
+  	•	Seamless transition between: List ↔ Grid ↔ Canvas
 	✦	Custom Metrics + Provider pattern for responsive layouts
 	✦	Supports list and grid view modes
 	✦	Screen size classification (width & height aware)
@@ -172,7 +189,7 @@ It’s more than responsive design; it’s a metric-driven, interactive adaptive
 	✦	Focus on architecture + performance + scalability
 	✦	Demonstrates real-world Android engineering challenges
 	✦	Built with modern Android best practices
-	
+
 ---
 
 This section shows **both your technical skills and the complexity of the system you built**, which is fantastic for a portfolio.
