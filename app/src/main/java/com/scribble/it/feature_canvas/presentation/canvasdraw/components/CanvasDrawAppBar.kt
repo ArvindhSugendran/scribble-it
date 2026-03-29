@@ -1,6 +1,5 @@
 package com.scribble.it.feature_canvas.presentation.canvasdraw.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -35,7 +34,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.scribble.it.feature_canvas.presentation.canvasdraw.ui.adaptive.metrics.CanvasDrawAppBarMetrics
-import com.scribble.it.ui.theme.ScribbleTheme
 
 @Composable
 fun CanvasDrawAppBar(
@@ -139,22 +137,22 @@ fun CanvasDrawAppBar(
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
-                
-                IconButton(
-                    modifier = Modifier
-                        .background(
-                            color = if(drawingEnabled) ScribbleTheme.scribbleColors.canvasDrawIconBackground else Color.Transparent,
-                            shape = CircleShape
-                        )
-                        .size(35.dp),
-                    onClick = { onDrawingEnable() }
+
+                Surface(
+                    modifier = Modifier.size(35.dp),
+                    shape = CircleShape,
+                    tonalElevation = if (drawingEnabled) 6.dp else 0.dp,
+                    shadowElevation = if (drawingEnabled) 6.dp else 0.dp
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Draw enable / disable",
-                        modifier = Modifier,
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
+                    IconButton(
+                        onClick = { onDrawingEnable() }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Draw enable / disable",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
             }
         }

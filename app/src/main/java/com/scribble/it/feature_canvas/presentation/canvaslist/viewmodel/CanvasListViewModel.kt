@@ -385,13 +385,10 @@ class CanvasListViewModel @Inject constructor(
             }
 
             is CanvasListAction.OnRevealChanged -> {
-                val selectedScribbleId = _canvasListUiState.value.pane.selectedScribbleId
                 _canvasListUiState.update { state ->
                     state.copy(
                         pane = state.pane.copy(
-                            paneReveal = action.reveal,
-                            selectedScribbleId = if (action.reveal == 1f && selectedScribbleId > 0) -1
-                            else selectedScribbleId,
+                            paneReveal = action.reveal
                         ),
                     )
                 }
